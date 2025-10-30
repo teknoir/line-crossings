@@ -299,10 +299,9 @@ async function loadAlertImageInModal(alert) {
       hint.textContent = 'Click image to play video';
       container.appendChild(hint);
 
-      // Add click handler to switch to video
-      canvas.style.cursor = 'pointer';
+      // Add click handler to switch to video while keeping overlay
       canvas.addEventListener('click', () => {
-        switchToVideo(alert, container);
+        switchToVideo(alert, container, canvas, metadata, annotationsData);
       });
     }
 
@@ -349,24 +348,76 @@ async function loadAlertImageInModal(alert) {
   }
 }
 
-function switchToVideo(alert, container) {
+function switchToVideo(alert, container, canvas, metadata, annotationsData) {
   if (!alert.videoUrl) return;
 
+  // Keep existing canvas dimensions
+  const origW = canvas.width;
+  const origH = canvas.height;
+
+  // Create wrapper to overlay canvas atop video
   container.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'relative';
+  wrapper.style.width = '100%';
+  wrapper.style.maxHeight = '70vh';
+  wrapper.style.background = '#000';
+  wrapper.style.overflow = 'hidden';
 
   const video = document.createElement('video');
   video.controls = true;
   video.autoplay = true;
   video.style.width = '100%';
-  video.style.maxHeight = '70vh';
+  video.style.height = '100%';
   video.style.objectFit = 'contain';
+  video.style.display = 'block';
 
   const source = document.createElement('source');
   source.src = alert.videoUrl;
   source.type = 'video/mp4';
-
   video.appendChild(source);
-  container.appendChild(video);
+  wrapper.appendChild(video);
+
+  // Prepare overlay canvas
+  canvas.width = origW;
+  canvas.height = origH;
+  canvas.style.position = 'absolute';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+  canvas.style.pointerEvents = 'none';
+  canvas.style.objectFit = 'contain';
+  canvas.style.zIndex = '2';
+  wrapper.appendChild(canvas);
+
+  container.appendChild(wrapper);
+
+  // Redraw overlay only (no base image) with existing filters (defaults)
+  canvasUtils.drawBoundingBoxes(canvas, null, metadata, annotationsData, { overlayOnly: true, showBoxes: true, showPaths: true });
+
+  // Optional: overlay toggle button
+  const toggleBtn = document.createElement('button');
+  toggleBtn.textContent = 'Toggle Overlay';
+  toggleBtn.style.position = 'absolute';
+  toggleBtn.style.top = '10px';
+  toggleBtn.style.right = '10px';
+  toggleBtn.style.zIndex = '3';
+  toggleBtn.style.background = 'rgba(0,0,0,0.6)';
+  toggleBtn.style.color = '#fff';
+  toggleBtn.style.border = 'none';
+  toggleBtn.style.padding = '6px 10px';
+  toggleBtn.style.borderRadius = '4px';
+  toggleBtn.style.cursor = 'pointer';
+  wrapper.appendChild(toggleBtn);
+  let overlayVisible = true;
+  toggleBtn.onclick = () => { overlayVisible = !overlayVisible; canvas.style.display = overlayVisible ? 'block' : 'none'; };
+
+  // Hint re-added
+  const hint = document.createElement('div');
+  hint.className = 'media-hint';
+  hint.textContent = 'Video playing with overlay';
+  wrapper.appendChild(hint);
 
   // Handle video load error
   video.addEventListener('error', () => {
@@ -862,6 +913,10 @@ function showError(message) {
 function setupAnnotationFilterControls(canvas, image, metadata, annotationsData) {
   const filterPanel = document.getElementById('annotationsFilter');
   if (!filterPanel) return;
+  const mediaContainer = document.getElementById('alertMediaContainer');
+
+  const isVideoActive = () => !!mediaContainer.querySelector('video');
+
   // Hide panel if no annotations data
   if (!annotationsData || !annotationsData.data || !Array.isArray(annotationsData.data.detections) || annotationsData.data.detections.length === 0) {
     filterPanel.style.display = 'none';
@@ -886,20 +941,99 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     const ids = rawIds ? rawIds.split(',').map(s => s.trim()).filter(Boolean) : null;
     const showBoxes = boxesCheckbox.checked;
     const showPaths = pathsCheckbox.checked;
-    canvasUtils.drawBoundingBoxes(canvas, image, metadata, annotationsData, { labels, ids, showBoxes, showPaths });
+    canvasUtils.drawBoundingBoxes(canvas, isVideoActive() ? null : image, metadata, annotationsData, { labels, ids, showBoxes, showPaths, overlayOnly: isVideoActive() });
   };
 
-  applyBtn.onclick = (e) => {
-    e.preventDefault();
-    redraw();
-  };
-
+  applyBtn.onclick = (e) => { e.preventDefault(); redraw(); };
   resetBtn.onclick = (e) => {
     e.preventDefault();
     labelsInput.value = '';
     idsInput.value = '';
     boxesCheckbox.checked = true;
     pathsCheckbox.checked = true;
-    canvasUtils.drawBoundingBoxes(canvas, image, metadata, annotationsData, { showBoxes: true, showPaths: true });
+    canvasUtils.drawBoundingBoxes(canvas, isVideoActive() ? null : image, metadata, annotationsData, { showBoxes: true, showPaths: true, overlayOnly: isVideoActive() });
   };
+}
+
+function switchToVideo(alert, container, canvas, metadata, annotationsData) {
+  if (!alert.videoUrl) return;
+
+  // Keep existing canvas dimensions
+  const origW = canvas.width;
+  const origH = canvas.height;
+
+  // Create wrapper to overlay canvas atop video
+  container.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'relative';
+  wrapper.style.width = '100%';
+  wrapper.style.maxHeight = '70vh';
+  wrapper.style.background = '#000';
+  wrapper.style.overflow = 'hidden';
+
+  const video = document.createElement('video');
+  video.controls = true;
+  video.autoplay = true;
+  video.style.width = '100%';
+  video.style.height = '100%';
+  video.style.objectFit = 'contain';
+  video.style.display = 'block';
+
+  const source = document.createElement('source');
+  source.src = alert.videoUrl;
+  source.type = 'video/mp4';
+  video.appendChild(source);
+  wrapper.appendChild(video);
+
+  // Prepare overlay canvas
+  canvas.width = origW;
+  canvas.height = origH;
+  canvas.style.position = 'absolute';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+  canvas.style.pointerEvents = 'none';
+  canvas.style.objectFit = 'contain';
+  canvas.style.zIndex = '2';
+  wrapper.appendChild(canvas);
+
+  container.appendChild(wrapper);
+
+  // Redraw overlay only (no base image) with existing filters (defaults)
+  canvasUtils.drawBoundingBoxes(canvas, null, metadata, annotationsData, { overlayOnly: true, showBoxes: true, showPaths: true });
+
+  // Optional: overlay toggle button
+  const toggleBtn = document.createElement('button');
+  toggleBtn.textContent = 'Toggle Overlay';
+  toggleBtn.style.position = 'absolute';
+  toggleBtn.style.top = '10px';
+  toggleBtn.style.right = '10px';
+  toggleBtn.style.zIndex = '3';
+  toggleBtn.style.background = 'rgba(0,0,0,0.6)';
+  toggleBtn.style.color = '#fff';
+  toggleBtn.style.border = 'none';
+  toggleBtn.style.padding = '6px 10px';
+  toggleBtn.style.borderRadius = '4px';
+  toggleBtn.style.cursor = 'pointer';
+  wrapper.appendChild(toggleBtn);
+  let overlayVisible = true;
+  toggleBtn.onclick = () => { overlayVisible = !overlayVisible; canvas.style.display = overlayVisible ? 'block' : 'none'; };
+
+  // Hint re-added
+  const hint = document.createElement('div');
+  hint.className = 'media-hint';
+  hint.textContent = 'Video playing with overlay';
+  wrapper.appendChild(hint);
+
+  // Handle video load error
+  video.addEventListener('error', () => {
+    container.innerHTML = `
+      <div class="error" style="padding: 30px; text-align: center;">
+        <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;">🎥</div>
+        <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #666;">Video file not available</div>
+        <div style="font-size: 13px; color: #999;">The video file could not be loaded.</div>
+      </div>
+    `;
+  });
 }

@@ -48,12 +48,33 @@ const canvasUtils = {
   drawBoundingBoxes(canvas, image, metadata, annotationsData, filterOptions) {
     const ctx = canvas.getContext('2d');
     try {
-      // Set canvas size to match image
-      canvas.width = image.width;
-      canvas.height = image.height;
+      const fo = filterOptions || {};
+      const overlayOnly = !!fo.overlayOnly;
 
-      // Draw base image first
-      ctx.drawImage(image, 0, 0, image.width, image.height);
+      // Determine target dimensions (from image or stored dataset)
+      if (!overlayOnly && image) {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        canvas.dataset.origWidth = image.width;
+        canvas.dataset.origHeight = image.height;
+      } else if (overlayOnly && (!canvas.width || !canvas.height)) {
+        // Fallback if dimensions missing
+        const w = parseInt(canvas.dataset.origWidth) || 1280;
+        const h = parseInt(canvas.dataset.origHeight) || 720;
+        canvas.width = w;
+        canvas.height = h;
+      }
+
+      const baseWidth = canvas.width;
+      const baseHeight = canvas.height;
+
+      // Clear canvas for overlay redraw
+      ctx.clearRect(0, 0, baseWidth, baseHeight);
+
+      // Draw base image unless overlayOnly
+      if (!overlayOnly && image) {
+        ctx.drawImage(image, 0, 0, baseWidth, baseHeight);
+      }
 
       let detections = [];
       if (annotationsData && annotationsData.data && Array.isArray(annotationsData.data.detections)) {
@@ -67,15 +88,12 @@ const canvasUtils = {
       }
       if (!detections.length) return;
 
-      // Normalize filter options
-      const fo = filterOptions || {};
       const labelSet = fo.labels instanceof Set ? fo.labels : (Array.isArray(fo.labels) ? new Set(fo.labels) : null);
       const idSet = fo.ids instanceof Set ? fo.ids : (Array.isArray(fo.ids) ? new Set(fo.ids) : null);
-      const showBoxes = fo.showBoxes !== false; // default true
-      const showPaths = fo.showPaths !== false; // default true
+      const showBoxes = fo.showBoxes !== false;
+      const showPaths = fo.showPaths !== false;
 
-      // Filter detections upfront
-      const filtered = detections.filter((d, idx) => {
+      const filtered = detections.filter(d => {
         const lbl = d.label ? d.label.toLowerCase() : null;
         if (labelSet && lbl && !labelSet.has(lbl)) return false;
         if (idSet && d.id && !idSet.has(String(d.id))) return false;
@@ -83,15 +101,13 @@ const canvasUtils = {
       });
       if (!filtered.length) return;
 
-      // First pass collect person paths if enabled
       const personPaths = {};
       if (showPaths) {
         filtered.forEach((d, index) => {
-          const labelOk = d.label && d.label.toLowerCase() === 'person';
-          if (!labelOk) return;
+          if (!(d.label && d.label.toLowerCase() === 'person')) return;
           let x, y, width, height;
           if (d._legacyPixels) { x = d.x; y = d.y; width = d.width; height = d.height; }
-          else if (typeof d.x1 === 'number') { x = d.x1 * image.width; y = d.y1 * image.height; width = (d.x2 - d.x1) * image.width; height = (d.y2 - d.y1) * image.height; }
+          else if (typeof d.x1 === 'number') { x = d.x1 * baseWidth; y = d.y1 * baseHeight; width = (d.x2 - d.x1) * baseWidth; height = (d.y2 - d.y1) * baseHeight; }
           else if (typeof d.x === 'number') { x = d.x; y = d.y; width = d.width; height = d.height; }
           else return;
           if (width <= 0 || height <= 0) return;
@@ -102,21 +118,18 @@ const canvasUtils = {
         });
       }
 
-      // Second pass draw boxes & labels if enabled
       if (showBoxes) {
         filtered.forEach((d, index) => {
           let x, y, width, height;
           if (d._legacyPixels) { x = d.x; y = d.y; width = d.width; height = d.height; }
-          else if (typeof d.x1 === 'number') { x = d.x1 * image.width; y = d.y1 * image.height; width = (d.x2 - d.x1) * image.width; height = (d.y2 - d.y1) * image.height; }
+          else if (typeof d.x1 === 'number') { x = d.x1 * baseWidth; y = d.y1 * baseHeight; width = (d.x2 - d.x1) * baseWidth; height = (d.y2 - d.y1) * baseHeight; }
           else if (typeof d.x === 'number') { x = d.x; y = d.y; width = d.width; height = d.height; }
           else return;
           if (width <= 0 || height <= 0) return;
-
           const strokeColor = this.getStrokeColorForId(d, index);
           ctx.strokeStyle = strokeColor;
           ctx.lineWidth = 3;
           ctx.strokeRect(x, y, width, height);
-
           const labelParts = [];
           if (d.label) labelParts.push(d.label);
           if (typeof d.score === 'number') labelParts.push(`${(d.score * 100).toFixed(0)}%`);
@@ -132,14 +145,14 @@ const canvasUtils = {
             const tabColor = this.getLabelColor(d.label);
             ctx.fillStyle = tabColor;
             ctx.fillRect(x, labelY, textWidth, textHeight);
-            ctx.fillStyle = strokeColor; ctx.fillRect(x, labelY, 4, textHeight);
+            ctx.fillStyle = strokeColor;
+            ctx.fillRect(x, labelY, 4, textHeight);
             ctx.fillStyle = '#FFFFFF';
             ctx.fillText(labelText, x + paddingX, labelY + textHeight - 6);
           }
         });
       }
 
-      // Third pass draw paths for persons
       if (showPaths) {
         Object.entries(personPaths).forEach(([id, points]) => {
           if (points.length < 2) return;
