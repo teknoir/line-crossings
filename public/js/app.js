@@ -95,10 +95,8 @@ function createAlertElement(alert) {
   if (selectedAlertId === alert._id) {
     div.classList.add('selected');
   }
-
   const timestamp = new Date(alert.start_time).toLocaleString();
   const statusClass = `status-${alert.status || 'new'}`;
-
   div.innerHTML = `
     <div class="alert-item-content">
       <span class="status-badge ${statusClass}">${alert.status || 'new'}</span>
@@ -107,11 +105,7 @@ function createAlertElement(alert) {
       <span class="alert-meta-item">🕒 ${timestamp}</span>
     </div>
   `;
-
-  div.addEventListener('click', () => {
-    selectAlert(alert._id);
-  });
-
+  div.addEventListener('click', () => selectAlert(alert._id, div));
   return div;
 }
 
@@ -133,23 +127,17 @@ function renderPagination(pagination) {
   });
 }
 
-async function selectAlert(alertId) {
+async function selectAlert(alertId, elementRef) {
   selectedAlertId = alertId;
-
   // Update selection in list
-  document.querySelectorAll('.alert-item').forEach(item => {
-    item.classList.remove('selected');
-  });
-  event.currentTarget.classList.add('selected');
-
-  // Show modal
+  document.querySelectorAll('.alert-item').forEach(item => item.classList.remove('selected'));
+  if (elementRef) elementRef.classList.add('selected');
   const modal = document.getElementById('alertModal');
   const modalContent = document.getElementById('alertModalContent');
   modal.style.display = 'block';
   modalContent.innerHTML = '<div class="loading">Loading alert details...</div>';
-
   try {
-    const alert = await api.getAlert(alertId);
+    const alert = await api.getAlert(alertId, { enrich: true });
     renderAlertModal(alert);
   } catch (error) {
     console.error('Error loading alert details:', error);
@@ -157,25 +145,61 @@ async function selectAlert(alertId) {
   }
 }
 
+function buildLineCrossingDetails(alert) {
+  const enrichment = alert.enrichment || {};
+  const direction = enrichment.lineDirection || enrichment.parsed?.direction || 'N/A';
+  const lineId = enrichment.lineId || 'N/A';
+  const cameraId = alert.peripheral_id || 'N/A';
+  const deviceId = alert.from_device || 'N/A';
+  const startTime = alert.start_time ? new Date(alert.start_time).toLocaleString() : 'N/A';
+  const endTime = alert.end_time ? new Date(alert.end_time).toLocaleString() : 'N/A';
+  const detectionId = alert.detection_id || enrichment.parsed?.detectionId || 'N/A';
+  const classifiers = enrichment.classifiers || [];
+  const classifierHtml = classifiers.length ? classifiers.map(c => `<div class='classifier-chip'><span>${c.label}</span><span>${(c.score*100).toFixed(1)}%</span></div>`).join('') : '<div class="classifier-none">None</div>';
+  const pose = enrichment.pose || null;
+  const poseHtml = pose ? `<span>${pose.coords.length} keypoints / ${pose.skeleton.length} edges</span>` : '<span class="muted">No pose</span>';
+  let multiDirHtml = '';
+  if (enrichment.multiDirections) {
+    const dirs = Object.keys(enrichment.multiDirections).filter(Boolean);
+    if (dirs.length > 1) multiDirHtml = `<div class="multi-dir-bar">${dirs.map(d => `<span class="dir-pill" data-dir="${d}">${d}</span>`).join('')}</div>`;
+  }
+  return `
+    <div class="line-details-panel">
+      <div class="line-details-header">
+        <h3 class="h-section">Line Crossing Details</h3>
+        ${multiDirHtml}
+      </div>
+      <div class="line-details-row">
+        <div class="info-card ld-card"><h3>Direction</h3><div class="value">${direction}</div></div>
+        <div class="info-card ld-card"><h3>Line ID</h3><div class="value">${lineId}</div></div>
+        <div class="info-card ld-card"><h3>Camera ID</h3><div class="value">${cameraId}</div></div>
+        <div class="info-card ld-card"><h3>Device ID</h3><div class="value">${deviceId}</div></div>
+        <div class="info-card ld-card"><h3>Start Time</h3><div class="value">${startTime}</div></div>
+        <div class="info-card ld-card"><h3>End Time</h3><div class="value">${endTime}</div></div>
+        <div class="info-card ld-card"><h3>Detection ID</h3><div class="value mono">${detectionId}</div></div>
+        <div class="info-card ld-card wide"><h3>Classifiers</h3><div class="value classifier-chips">${classifierHtml}</div></div>
+        <div class="info-card ld-card"><h3>Pose</h3><div class="value pose-val">${poseHtml}</div></div>
+      </div>
+    </div>`;
+}
+
 async function renderAlertModal(alert) {
   const container = document.getElementById('alertModalContent');
-  const timestamp = new Date(alert.start_time).toLocaleString();
-  const endTime = alert.end_time ? new Date(alert.end_time).toLocaleString() : 'N/A';
-
-  // Check annotations status - will be updated after loading
-  const annotationsStatusHtml = `<span class="status-badge" id="annotationsStatusBadge" style="background: #999; color: white;">Checking...</span>`;
-
+  const enrichmentDetailsHtml = buildLineCrossingDetails(alert);
+  const enrichment = alert.enrichment || {};
+  const rawBurst = enrichment.burstImages || [];
+  const cutoutImage = enrichment.cutoutImage || null;
+  const burstImages = cutoutImage ? [cutoutImage, ...rawBurst.filter(u => u !== cutoutImage)] : rawBurst;
   container.innerHTML = `
     <div class="alert-modal-header">
-      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <h2>Alert Details</h2>
         <span class="status-badge status-${alert.status || 'new'}">${alert.status || 'new'}</span>
-        ${annotationsStatusHtml}
+        <span class="status-badge" id="annotationsStatusBadge" style="background:#999;color:white;">Checking...</span>
       </div>
-      <div style="font-family: 'Monaco', 'Courier New', monospace; font-size: 13px; color: #1976D2; margin-top: 8px;">
-        ${alert.id || alert._id}
-      </div>
+      <div class="alert-id-text">${alert.id || alert._id}</div>
     </div>
+    ${enrichmentDetailsHtml}
     <div class="annotations-filter" id="annotationsFilter">
       <h3 class="h-section">Annotation Filters</h3>
       <div class="filter-grid">
@@ -204,48 +228,19 @@ async function renderAlertModal(alert) {
       <div class="loading">Loading media...</div>
       ${alert.videoUrl ? '<div class="media-hint">Click image to play video</div>' : ''}
     </div>
-    ${alert.llm_classification && alert.llm_classification.summary ? `
-    <div class="alert-modal-summary">
-      <h3>🤖 AI Summary</h3>
-      <p>${alert.llm_classification.summary}</p>
-      ${alert.llm_classification.count_humans ? `
-        <div class="summary-stats">
-          👥 ${alert.llm_classification.count_humans} human(s) detected
-          ${alert.llm_classification.frames_processed ? ` • 🎬 ${alert.llm_classification.frames_processed} frames processed` : ''}
-        </div>
-      ` : ''}
+    <div class="burst-gallery">
+      <h3 class="h-section">Burst Images</h3>
+      ${burstImages.length ? `<div class="burst-strip" id="burstStrip">${burstImages.map((u,i)=>`<img src='${u}' data-index='${i}' class='burst-thumb ${i===0 && cutoutImage? 'burst-cutout-first':''}' loading='lazy' alt='burst ${i}'/>`).join('')}</div>` : '<div class="burst-strip empty">No burst images</div>'}
     </div>
-    ` : ''}
-    
-    <div class="alert-modal-info">
-      <div class="info-card">
-        <h3>Camera ID</h3>
-        <div class="value">${alert.peripheral_id || 'N/A'}</div>
-      </div>
-      <div class="info-card">
-        <h3>Device ID</h3>
-        <div class="value">${alert.from_device || 'N/A'}</div>
-      </div>
-      <div class="info-card">
-        <h3>Start Time</h3>
-        <div class="value">${timestamp}</div>
-      </div>
-      <div class="info-card">
-        <h3>End Time</h3>
-        <div class="value">${endTime}</div>
-      </div>
-      <div class="info-card">
-        <h3>Detection ID</h3>
-        <div class="value">${alert.detection_id || 'N/A'}</div>
-      </div>
-    </div>
-    <div id="annotationsStatsContainer"></div>
-  `;
+    <div id="annotationsStatsContainer"></div>`;
+  if (alert.imageUrl) loadAlertImageInModal(alert);
+  setupBurstGalleryInteractions();
+}
 
-  // Load and display image with option to switch to video
-  if (alert.imageUrl) {
-    loadAlertImageInModal(alert);
-  }
+function setupBurstGalleryInteractions() {
+  const strip = document.getElementById('burstStrip');
+  if (!strip) return;
+  strip.querySelectorAll('img.burst-thumb').forEach(img => { img.style.cursor = 'zoom-in'; const preload = new Image(); preload.src = img.src; });
 }
 
 async function loadAlertImageInModal(alert) {

@@ -891,3 +891,88 @@ header { margin-bottom: var(--space-section); }
 .alert-modal-media > div { /* legacy rule removal safeguard */ }
 .alert-modal-media > .media-wrapper { width:100%; height:100%; position:relative; }
 .alert-modal-media > .media-hint { width:auto !important; height:auto !important; }
+
+.burst-gallery { margin-bottom: var(--space-lg); }
+.burst-strip { display:flex; gap:6px; overflow-x:auto; padding:8px; background: var(--color-surface-alt); border:1px solid var(--color-border); }
+.burst-strip { position:relative; }
+.burst-thumb { transition: transform .25s ease, box-shadow .25s ease, z-index .25s; }
+.burst-thumb:hover { transform: scale(2); z-index: 20; box-shadow:0 6px 16px rgba(0,0,0,0.7); }
+.burst-thumb.burst-cutout-first { outline:2px solid var(--color-accent); }
+/* Ensure overflow visible for scaling */
+.burst-gallery { overflow:visible; }
+.burst-strip { overflow:visible; }
+/* Remove lightbox styles (no longer used) */
+.burst-lightbox, .burst-lightbox-inner { display:none !important; }
+
+/* Line Crossing Details section styles */
+.line-details-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    padding: 16px 18px;
+    margin-bottom: 24px;
+}
+.line-details-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+.line-details-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+    gap: 12px;
+    align-items: stretch;
+}
+.ld-card {
+    display: flex;
+    flex-direction: column;
+}
+.ld-card.wide {
+    grid-column: span 2;
+}
+.ld-card .value {
+    font-size: 13px;
+    margin-top: 4px;
+    word-break: break-word;
+}
+.ld-card .mono {
+    font-family: 'Monaco','Courier New',monospace;
+    font-size: 11px;
+}
+.multi-dir-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.dir-pill {
+    background: var(--color-surface-alt);
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 14px;
+    cursor: pointer;
+    border: 1px solid var(--color-border-alt);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+}
+.dir-pill:hover {
+    background: var(--color-accent);
+    color: #fff;
+}
+.classifier-none {
+    color: #777;
+    font-size: 12px;
+}
+.pose-val span {
+    font-size: 12px;
+}
+.line-details-panel .info-card {
+    background: var(--color-surface-alt);
+    border: 1px solid var(--color-border-alt);
+}
+
+@media (max-width:900px){
+    .line-details-row {
+        grid-template-columns: repeat(auto-fit,minmax(140px,1fr));
+    }
+}

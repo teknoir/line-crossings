@@ -108,6 +108,25 @@ List all alerts with pagination and filtering.
 ### GET /api/alerts/:id
 Get specific alert details.
 
+Query Params:
+- `enrich=0` to disable enrichment
+- `raw=1` or `debug=1` to include raw line-crossing document under `enrichment.raw`
+
+Enrichment Fields (when available):
+```json
+{
+  "enrichment": {
+    "parsed": {"detectionId": "...", "direction": "entry|exit", "segmentIndex": 0},
+    "lineDirection": "entry",
+    "lineId": "lc-entry-0-segments",
+    "classifiers": [{"label": "up", "score": 0.9873}],
+    "pose": {"coords": [...], "skeleton": [...], "keypoints": [...]},
+    "burstImages": ["https://.../jpeg/media/lc-person-cutouts/...-0.jpg", "https://.../jpeg/...-1.jpg"],
+    "cutoutImage": "https://.../jpeg/media/lc-person-cutouts/...cutout.jpg"
+  }
+}
+```
+
 **Response:**
 ```json
 {
@@ -127,6 +146,31 @@ Get specific alert details.
   "imageUrl": "https://teknoir.cloud/victra-poc/media-service/api/media/snapshots/...",
   "videoUrl": "https://teknoir.cloud/victra-poc/media-service/api/media/videos/...",
   "metadataUrl": "https://teknoir.cloud/victra-poc/media-service/api/media/annotations/..."
+}
+```
+
+### Debugging Line-Crossings Lookup
+Use the `?debug=1` query param on the alert details endpoint to see each query strategy and whether it matched:
+
+Example:
+`GET /api/alerts/ALERT_OBJECT_ID?debug=1`
+
+Response enrichment debug structure:
+```json
+"enrichment": {
+  "debug": {
+    "searchedFor": {"detectionId": "nc0009-salefloor-270-155f0f2e-935", "direction": "exit", "segmentIndex": 0},
+    "peripheral_id": "nc0009-salefloor-270",
+    "attempts": [
+      {"strategy": "exact_match", "found": false, "query": {"metadata.annotations.teknoir.org/linedir": "exit", "data.id": "nc0009-salefloor-270-155f0f2e-935"}},
+      {"strategy": "prefix_regex", "found": true, "query": {"metadata.annotations.teknoir.org/linedir": "exit", "data.id": {"$regex": "^nc0009-salefloor-270-155f0f2e-935"}}},
+      {"strategy": "lineid+peripheral", "found": false, "query": {"metadata.annotations.teknoir.org/linedir": "exit", "metadata.annotations.teknoir.org/lineid": "lc-exit-0-segments"}},
+      {"strategy": "recent_by_peripheral_id", "candidates": 0, "query": {"metadata.annotations.teknoir.org/linedir": "exit", "data.peripheral.id": "nc0009-salefloor-270"}},
+      {"strategy": "recent_by_peripheral_name", "candidates": 0, "query": {"metadata.annotations.teknoir.org/linedir": "exit", "data.peripheral.name": "nc0009-salefloor-270"}},
+      {"strategy": "latest_direction", "found": true, "query": {"metadata.annotations.teknoir.org/linedir": "exit"}}
+    ],
+    "prettyPrintedAttempts": [ /* Same content but safe-cloned */ ]
+  }
 }
 ```
 
@@ -575,4 +619,3 @@ npm start
 ## License
 
 MIT
-

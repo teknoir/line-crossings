@@ -1,6 +1,7 @@
 const express = require('express');
 const { getDatabase } = require('../utils/db');
 const { ObjectId } = require('mongodb');
+const { enrichAlert } = require('../utils/enrichAlert');
 
 const router = express.Router();
 
@@ -127,12 +128,36 @@ router.get('/:id', async (req, res) => {
 
     // Transform alert to include direct media service URLs
     const mediaBaseUrl = process.env.MEDIA_SERVICE_BASE_URL || 'https://teknoir.cloud/victra-poc/media-service/api';
-    const transformedAlert = {
+    let transformedAlert = {
       ...alert,
       imageUrl: alert.video_snapshot ? `${mediaBaseUrl}/jpeg/${alert.video_snapshot}` : null,
       videoUrl: alert.video_url ? `${mediaBaseUrl}/mp4/${alert.video_url}` : null,
       metadataUrl: alert.annotations_url ? `${mediaBaseUrl}/json/${alert.annotations_url}` : null
     };
+
+    // Enrichment (default on unless enrich=0)
+    const enrichFlag = req.query.enrich !== '0';
+    const includeRaw = req.query.raw === '1' || req.query.debug === '1';
+    const debugFlag = req.query.debug === '1';
+    const includeBoth = req.query.includeBoth === '1';
+
+    if (enrichFlag) {
+      try {
+        transformedAlert = await enrichAlert(transformedAlert, db, { enrich: true, includeRaw, debug: debugFlag, includeBoth });
+        if (debugFlag && transformedAlert.enrichment?.debug?.attempts) {
+          transformedAlert.enrichment.debug.prettyPrintedAttempts = transformedAlert.enrichment.debug.attempts.map(a => ({
+            strategy: a.strategy,
+            found: a.found,
+            candidates: a.candidates,
+            picked: a.picked,
+            count: a.count,
+            query: a.query ? JSON.parse(JSON.stringify(a.query)) : undefined
+          }));
+        }
+      } catch (e) {
+        transformedAlert.enrichment = { error: e.message };
+      }
+    }
 
     res.json(transformedAlert);
   } catch (error) {
