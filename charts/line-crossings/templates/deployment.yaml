@@ -22,15 +22,20 @@ spec:
               name: http
           env:
             - name: MONGO_URI
-              value: {{ .Values.mongo.database | quote }}
-            - name: MONGO_DATABASE
-              value: {{ .Values.mongo.database | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: mongodb-credentials
+                  key: uri
+            - name: MEDIA_SERVICE_BASE_URL
+              value: {{ .Values.mediaServiceBaseUrl | quote }}
             - name: BASE_URL
-              value: {{ include "line-crossings.full-base-path" . | quote }}
+              value: {{ .Values.basePath | quote }}
             - name: NAMESPACE
               value: {{ .Release.Namespace | quote }}
             - name: DOMAIN
               value: {{ .Values.domain | quote }}
+            - name: PORT
+              value: "3000"
           resources:
             requests:
               cpu: 250m

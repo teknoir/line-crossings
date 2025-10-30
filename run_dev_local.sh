@@ -147,7 +147,7 @@ echo "Starting dev server..."
 export MONGODB_PASSWORD=$(kubectl --context=$CONTEXT --namespace=$NAMESPACE get secret mongodb-credentials -o yaml | yq .data.password | base64 -d)
 export MONGODB_USER=$(kubectl --context=$CONTEXT --namespace=$NAMESPACE get secret mongodb-credentials -o yaml | yq .data.username | base64 -d)
 export MONGODB_URI="mongodb://${MONGODB_USER}:${MONGODB_PASSWORD}@localhost:27017/historian?authSource=admin&readPreference=primary&appname=LC&ssl=false"
-export MONGO_DATABASE="alerts"
+#export MONGO_DATABASE="alerts"
 export MEDIA_SERVICE_BASE_URL="http://localhost:8882/$NAMESPACE/media-service/api"
 export BASE_URL="/"
 export PORT=3000

@@ -1,9 +1,6 @@
 basePath: /line-crossings
 domain: teknoir.cloud
-
-mongo:
-  uri: mongodb://mongo:27017
-  database: alerts
+mediaServiceBaseUrl: https://teknoir.cloud/victra-poc/media-service/api
 
 image:
   repository: us-docker.pkg.dev/teknoir/gcr.io/line-crossings

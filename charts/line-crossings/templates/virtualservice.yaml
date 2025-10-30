@@ -11,7 +11,7 @@ spec:
   http:
     - match:
         - uri:
-            prefix: {{ include "line-crossings.full-base-path" . | quote }}
+            prefix: {{ .Values.basePath | quote }}
       route:
         - destination:
             host: line-crossings.{{ .Release.Namespace }}.svc.cluster.local
