@@ -16,30 +16,65 @@ router.get('/', async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Base filter - only line_crossing alerts
-    const filter = { type: 'line_crossing' };
+    let baseFilter = { type: 'line_crossing' };
+    let filter = { ...baseFilter };
 
     // Search filter on alert ID (the 'id' field, not '_id')
     if (req.query.search) {
       filter.id = { $regex: req.query.search, $options: 'i' }; // case-insensitive search
     }
 
-    // Date range filter on start_time
+    // Determine storage type of start_time once (Date vs String)
+    const sample = await collection.findOne(baseFilter, { projection: { start_time: 1 } });
+    const startTimeIsDate = sample && sample.start_time instanceof Date;
+
+    let appliedDateFilter = false;
     if (req.query.startDate || req.query.endDate) {
-      filter.start_time = {};
+      const startDateValue = req.query.startDate ? new Date(req.query.startDate) : null;
+      const endDateValue = req.query.endDate ? new Date(req.query.endDate) : null;
 
-      if (req.query.startDate) {
-        // Filter alerts that started after or at this time
-        filter.start_time.$gte = new Date(req.query.startDate);
+      if (startTimeIsDate) {
+        // Normal direct date comparison
+        filter.start_time = {};
+        if (startDateValue) filter.start_time.$gte = startDateValue;
+        if (endDateValue) filter.start_time.$lte = endDateValue;
+      } else {
+        // Use $expr with $dateFromString for string stored timestamps (assuming ISO format strings)
+        const exprConditions = [];
+        if (startDateValue) {
+          exprConditions.push({
+            $gte: [
+              { $dateFromString: { dateString: '$start_time' } },
+              startDateValue
+            ]
+          });
+        }
+        if (endDateValue) {
+          exprConditions.push({
+            $lte: [
+              { $dateFromString: { dateString: '$start_time' } },
+              endDateValue
+            ]
+          });
+        }
+        if (exprConditions.length > 0) {
+          filter.$expr = { $and: exprConditions };
+        }
       }
-
-      if (req.query.endDate) {
-        // Filter alerts that started before or at this time
-        filter.start_time.$lte = new Date(req.query.endDate);
-      }
+      appliedDateFilter = true;
     }
 
-    // Get total count for pagination
+    // Get total count for pagination (after filters)
     const total = await collection.countDocuments(filter);
+
+    // If date filter applied and no results, but there are alerts without date filter, surface warning
+    let dateFilterWarning = false;
+    if (appliedDateFilter && total === 0) {
+      const totalWithoutDate = await collection.countDocuments(baseFilter);
+      if (totalWithoutDate > 0) {
+        dateFilterWarning = true;
+      }
+    }
 
     // Fetch alerts - sorted by start_time descending (latest first)
     const alerts = await collection
@@ -58,12 +93,6 @@ router.get('/', async (req, res) => {
       metadataUrl: alert.annotations_url ? `${mediaBaseUrl}/json/${alert.annotations_url}` : null
     }));
 
-    if (transformedAlerts.length > 0) {
-      console.log('Sample image URL:', transformedAlerts[0].imageUrl);
-      console.log('Sample video URL:', transformedAlerts[0].videoUrl);
-      console.log('Sample metadata URL:', transformedAlerts[0].metadataUrl);
-    }
-
     res.json({
       alerts: transformedAlerts,
       pagination: {
@@ -71,6 +100,11 @@ router.get('/', async (req, res) => {
         limit,
         total,
         pages: Math.ceil(total / limit)
+      },
+      meta: {
+        dateFilterApplied: appliedDateFilter,
+        dateFilterWarning,
+        startTimeType: startTimeIsDate ? 'Date' : 'String'
       }
     });
   } catch (error) {
@@ -108,4 +142,3 @@ router.get('/:id', async (req, res) => {
 });
 
 module.exports = router;
-

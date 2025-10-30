@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function initApp() {
-  // Check health
   try {
     await api.healthCheck();
     document.getElementById('status').textContent = 'Connected';
@@ -23,13 +22,10 @@ async function initApp() {
     showError('Failed to connect to server');
   }
 
-  // Set default date range (last 24 hours)
-  setDefaultDateRange();
-
-  // Load initial alerts
-  loadAlerts();
-
-  // Setup event listeners
+  // Set default 24h range and apply filters
+  setDefaultDateRange24h();
+  applyDefaultFilters();
+  await loadAlerts();
   setupEventListeners();
 }
 
@@ -37,10 +33,6 @@ function setupEventListeners() {
   // Search controls
   document.getElementById('searchBtn').addEventListener('click', applySearch);
   document.getElementById('clearBtn').addEventListener('click', clearSearch);
-
-  // Date filters
-  document.getElementById('startDate').addEventListener('change', applySearch);
-  document.getElementById('endDate').addEventListener('change', applySearch);
 
   // Allow search on Enter key
   document.getElementById('searchInput').addEventListener('keypress', (e) => {
@@ -75,26 +67,21 @@ function setupEventListeners() {
 async function loadAlerts(page = 1) {
   const container = document.getElementById('alertsContainer');
   container.innerHTML = '<div class="loading">Loading alerts...</div>';
-
   try {
     const filters = { ...currentFilters, page, limit: 20 };
     const data = await api.getAlerts(filters);
 
+    // Show warning if backend indicates date filter mismatch
+    renderDateFilterWarning(data.meta);
+
     if (data.alerts.length === 0) {
-      container.innerHTML = '<p class="placeholder">No alerts found</p>';
+      container.innerHTML = '<p class="placeholder">No alerts found for selected filters</p>';
       return;
     }
 
-    // Render alerts
     container.innerHTML = '';
-    data.alerts.forEach(alert => {
-      const alertElement = createAlertElement(alert);
-      container.appendChild(alertElement);
-    });
-
-    // Render pagination
+    data.alerts.forEach(alert => container.appendChild(createAlertElement(alert)));
     renderPagination(data.pagination);
-
     currentPage = page;
   } catch (error) {
     console.error('Error loading alerts:', error);
@@ -838,28 +825,52 @@ function applySearch() {
 
 function clearSearch() {
   document.getElementById('searchInput').value = '';
-  setDefaultDateRange();
-  currentFilters = {};
+  setDefaultDateRange24h();
+  applyDefaultFilters();
   loadAlerts(1);
 }
 
 // Set default date range (last 24 hours)
-function setDefaultDateRange() {
+function setDefaultDateRange24h() {
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const format = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('startDate').value = format(oneDayAgo);
+  document.getElementById('endDate').value = format(now);
+}
 
-  // Format dates for datetime-local input (YYYY-MM-DDTHH:MM)
-  const formatDateTimeLocal = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
+// Apply default filters to currentFilters (used when setting default date range)
+function applyDefaultFilters() {
+  const startDate = document.getElementById('startDate').value;
+  const endDate = document.getElementById('endDate').value;
 
-  document.getElementById('startDate').value = formatDateTimeLocal(oneDayAgo);
-  document.getElementById('endDate').value = formatDateTimeLocal(now);
+  currentFilters = {};
+
+  if (startDate) {
+    currentFilters.startDate = new Date(startDate).toISOString();
+  }
+  if (endDate) {
+    currentFilters.endDate = new Date(endDate).toISOString();
+  }
+}
+
+function renderDateFilterWarning(meta) {
+  let bar = document.getElementById('dateFilterWarningBar');
+  if (!meta) {
+    if (bar) bar.remove();
+    return;
+  }
+  if (meta.dateFilterApplied && meta.dateFilterWarning) {
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'dateFilterWarningBar';
+      bar.style.cssText = 'background:#fff3cd;color:#856404;padding:10px 15px;border:1px solid #ffe8a1;border-radius:6px;margin-bottom:12px;font-size:13px;';
+      document.querySelector('.alerts-list').insertBefore(bar, document.querySelector('.alerts-list').firstChild.nextSibling);
+    }
+    bar.innerHTML = `⚠ No alerts match the selected date range. There are alerts outside this range. (start_time stored as ${meta.startTimeType})`;
+  } else if (bar) {
+    bar.remove();
+  }
 }
 
 function showError(message) {
@@ -871,4 +882,3 @@ function showError(message) {
 
   setTimeout(() => errorDiv.remove(), 5000);
 }
-
