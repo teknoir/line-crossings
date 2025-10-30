@@ -3,6 +3,16 @@ entries:
   line-crossings:
   - apiVersion: v2
     appVersion: 0.1.0
+    created: "2025-10-30T16:56:25.678499298Z"
+    description: Helm chart for deploying Line Crossings services.
+    digest: 8d5b118644314a64f88fb82ccf85b050d42b8457357fcb04764d90a0765ac8d4
+    name: line-crossings
+    type: application
+    urls:
+    - https://github.com/teknoir/line-crossings/releases/download/line-crossings-0.1.11/line-crossings-0.1.11.tgz
+    version: 0.1.11
+  - apiVersion: v2
+    appVersion: 0.1.0
     created: "2025-10-30T15:28:39.842126164Z"
     description: Helm chart for deploying Line Crossings services.
     digest: 9df16043ac5c621b02682e3bbcf02e4e4d9474850bf78ae05c4f113a65e50326
@@ -11,4 +21,4 @@ entries:
     urls:
     - https://github.com/teknoir/line-crossings/releases/download/line-crossings-0.1.10/line-crossings-0.1.10.tgz
     version: 0.1.10
-generated: "2025-10-30T15:28:39.842132185Z"
+generated: "2025-10-30T16:56:25.678513234Z"
