@@ -167,11 +167,49 @@ const canvasUtils = {
           for (let i=1;i<points.length;i++) ctx.lineTo(points[i].x, points[i].y);
           ctx.stroke();
           ctx.setLineDash([]);
-          points.forEach(p => { ctx.beginPath(); ctx.fillStyle = strokeColor; ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill(); });
+          // Draw directional triangle markers
+          for (let i=0;i<points.length;i++) {
+            const p = points[i];
+            // Determine direction vector: prefer next point; fallback to previous if last
+            let dx, dy;
+            if (i < points.length - 1) {
+              dx = points[i+1].x - p.x;
+              dy = points[i+1].y - p.y;
+            } else {
+              dx = p.x - points[i-1].x;
+              dy = p.y - points[i-1].y;
+            }
+            const angle = Math.atan2(dy, dx);
+            this.drawTriangleMarker(ctx, p.x, p.y, angle, strokeColor);
+          }
           ctx.restore();
         });
       }
     } catch (err) { console.error('drawBoundingBoxes error:', err); }
+  },
+
+  // Helper: draw oriented triangle marker pointing along angle
+  drawTriangleMarker(ctx, x, y, angle, color, size = 12) {
+    // Triangle pointing along +X in local space: tip ahead, base behind
+    const tip = { x: size, y: 0 };
+    const left = { x: 0, y: -size / 2 };
+    const right = { x: 0, y: size / 2 };
+
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const tx = (pt) => ({ x: x + pt.x * cos - pt.y * sin, y: y + pt.x * sin + pt.y * cos });
+
+    const tipT = tx(tip);
+    const leftT = tx(left);
+    const rightT = tx(right);
+
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.moveTo(tipT.x, tipT.y);
+    ctx.lineTo(leftT.x, leftT.y);
+    ctx.lineTo(rightT.x, rightT.y);
+    ctx.closePath();
+    ctx.fill();
   },
 
   // Stable color selection per detection id
