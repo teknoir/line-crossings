@@ -152,6 +152,100 @@ Get specific alert details.
 }
 ```
 
+**Line-Crossings Collection - Example:**
+```json
+  {
+    "_id": {"$oid": "690340081e686e6ca09ebeb6"},
+    "apiVersion": "teknoir.org/v1beta2",
+        "data": {
+        "id": "demonstrator-se-lc1-44b1357b-2988",
+            "x1": 0.55859375,
+            "y1": 0.15927734375,
+            "x2": 0.61796875,
+            "y2": 0.448828125,
+            "width": 0.059375,
+            "height": 0.28955078125,
+            "area": 0.01719207763671875,
+            "ratio": 2.743112664473684,
+            "x_center": 0.58828125,
+            "y_center": 0.304052734375,
+            "score": 0.8896484375,
+            "class_id": 4,
+            "label": "line-crossing",
+            "keypoints": ["nose", "left_eye", "right_eye", "left_ear", "right_ear", "left_shoulder", "right_shoulder", "left_elbow", "right_elbow", "left_hand", "right_hand", "left_hip", "right_hip", "left_knee", "right_knee", "left_ankle", "right_ankle", "neck"],
+            "coords": [
+            [0.5995446443557739, 0.20032939314842224],
+            [0.6011298298835754, 0.19538627564907074],
+            [0.597865879535675, 0.19041940569877625],
+            [0, 0],
+            [0.5884963274002075, 0.18590237200260162],
+            [0.5982832908630371, 0.2297966182231903],
+            [0.5865501761436462, 0.2297087013721466],
+            [0, 0],
+            [0.5949140191078186, 0.28068432211875916],
+            [0, 0],
+            [0.610177218914032, 0.3156489431858063],
+            [0, 0],
+            [0, 0],
+            [0, 0],
+            [0, 0],
+            [0, 0],
+            [0, 0],
+            [0.5917493104934692, 0.23194950819015503]
+        ],
+            "skeleton": [
+            [0, 17],
+            [0, 1],
+            [0, 2],
+            [1, 3],
+            [2, 4],
+            [17, 5],
+            [17, 6],
+            [17, 11],
+            [17, 12],
+            [5, 7],
+            [7, 9],
+            [6, 8],
+            [8, 10],
+            [11, 12],
+            [11, 13],
+            [13, 15],
+            [12, 14],
+            [14, 16],
+            [0, 0]
+        ],
+            "classifiers": [
+            {
+                "label": "up",
+                "score": 0.9873543381690979
+            }
+        ],
+            "timestamp": "2025-10-30T10:37:17.439Z",
+            "type": "analytics",
+            "in_exclusion_zone": false,
+            "in_inclusion_zone": false,
+            "peripheral": {
+            "type": "camera",
+                "name": "demonstrator-se-lc1",
+                "id": "demonstrator-se-lc1"
+        },
+        "filename": "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z.jpg", 
+        "burst": ["media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-0.jpg", "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-1.jpg", "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-2.jpg", "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-3.jpg", "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-4.jpg", "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-5.jpg", "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-6.jpg", "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-7.jpg", "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-8.jpg", "media/lc-person-cutouts/2025-10-30/lc-entry-0-segments/demonstrator-se-lc1-44b1357b-2988-2025-10-30T10:37:57.012Z-9.jpg"]
+    },
+    "kind": "DetectionEvent",
+        "metadata": {
+        "id": "demonstrator-se-lc1-44b1357b-2988",
+            "namespace": "test-namespace",
+            "timestamp": "2025-10-30T10:37:17.830Z",
+            "annotations": {
+            "teknoir.org/linedir": "entry",
+            "teknoir.org/lineid": "lc-entry-0-segments"
+        }
+    }
+}
+```
+
+
 **Media URLs:**
 The application constructs full URLs by prepending `MEDIA_SERVICE_BASE_URL` to the paths:
 - Image: `${MEDIA_SERVICE_BASE_URL}/${video_snapshot}`
@@ -159,21 +253,293 @@ The application constructs full URLs by prepending `MEDIA_SERVICE_BASE_URL` to t
 - Metadata: `${MEDIA_SERVICE_BASE_URL}/${annotations_url}`
 
 **Bounding Box Metadata JSON (from mediaservice):**
-```javascript
+```json
 {
-  boxes: [
-    {
-      x: Number,           // top-left x coordinate
-      y: Number,           // top-left y coordinate
-      width: Number,       // box width
-      height: Number,      // box height
-      class: String,       // "person", "vehicle", etc.
-      confidence: Number   // 0-1 detection confidence
+    "data": {
+        "metadata": {
+            "start_time": "2025-10-15T10:50:48.242Z",
+                "end_time": "2025-10-15T10:51:33.144Z"
+        },
+        "detections": [
+            {
+                "id": "demonstrator-se-lc2-9749d32f-2601",
+                "x1": 0.2462890625,
+                "y1": 0.4171875,
+                "x2": 0.2703125,
+                "y2": 0.471484375,
+                "width": 0.0240234375,
+                "height": 0.054296875,
+                "area": 0.0013043975830078127,
+                "ratio": 1.271341463414634,
+                "x_center": 0.25830078125,
+                "y_center": 0.4443359375,
+                "score": 0.63037109375,
+                "class_id": 3,
+                "label": "face_cover",
+                "timestamp": "2025-10-15T10:50:48.242Z",
+                "type": "object",
+                "in_exclusion_zone": false,
+                "in_inclusion_zone": false,
+                "peripheral": {
+                    "type": "camera",
+                    "name": "demonstrator-se-lc2",
+                    "id": "demonstrator-se-lc2",
+                    "stream_uri": "rtsp://mediamtx:8554/front-door-1-wrongly-classified-exits"
+                }
+            },
+            {
+                "id": "demonstrator-se-lc2-9749d32f-2599",
+                "x1": 0.2236328125,
+                "y1": 0.3982421875,
+                "x2": 0.312109375,
+                "y2": 0.740234375,
+                "width": 0.0884765625,
+                "height": 0.3419921875,
+                "area": 0.030258293151855464,
+                "ratio": 2.174254966887417,
+                "x_center": 0.26787109375,
+                "y_center": 0.56923828125,
+                "score": 0.9267578125,
+                "class_id": 4,
+                "label": "person",
+                "keypoints": [
+                    "nose",
+                    "left_eye",
+                    "right_eye",
+                    "left_ear",
+                    "right_ear",
+                    "left_shoulder",
+                    "right_shoulder",
+                    "left_elbow",
+                    "right_elbow",
+                    "left_hand",
+                    "right_hand",
+                    "left_hip",
+                    "right_hip",
+                    "left_knee",
+                    "right_knee",
+                    "left_ankle",
+                    "right_ankle",
+                    "neck"
+                ],
+                "coords": [
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0.2863526940345764,
+                        0.6201004981994629
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ],
+                    [
+                        0,
+                        0
+                    ]
+                ],
+                "skeleton": [
+                    [
+                        0,
+                        17
+                    ],
+                    [
+                        0,
+                        1
+                    ],
+                    [
+                        0,
+                        2
+                    ],
+                    [
+                        1,
+                        3
+                    ],
+                    [
+                        2,
+                        4
+                    ],
+                    [
+                        17,
+                        5
+                    ],
+                    [
+                        17,
+                        6
+                    ],
+                    [
+                        17,
+                        11
+                    ],
+                    [
+                        17,
+                        12
+                    ],
+                    [
+                        5,
+                        7
+                    ],
+                    [
+                        7,
+                        9
+                    ],
+                    [
+                        6,
+                        8
+                    ],
+                    [
+                        8,
+                        10
+                    ],
+                    [
+                        11,
+                        12
+                    ],
+                    [
+                        11,
+                        13
+                    ],
+                    [
+                        13,
+                        15
+                    ],
+                    [
+                        12,
+                        14
+                    ],
+                    [
+                        14,
+                        16
+                    ],
+                    [
+                        0,
+                        0
+                    ]
+                ],
+                "classifiers": [
+                    {
+                        "label": "up",
+                        "score": 0.9802155494689941
+                    }
+                ],
+                "timestamp": "2025-10-15T10:50:48.242Z",
+                "type": "object",
+                "in_exclusion_zone": false,
+                "in_inclusion_zone": false,
+                "peripheral": {
+                    "type": "camera",
+                    "name": "demonstrator-se-lc2",
+                    "id": "demonstrator-se-lc2",
+                    "stream_uri": "rtsp://mediamtx:8554/front-door-1-wrongly-classified-exits"
+                }
+            }
+        ]
     }
-  ],
-  imageWidth: Number,
-  imageHeight: Number
 }
+```
+
+## Annotations
+
+### Pose
+- Draw skeletons using `keypoints` and `skeleton` arrays from metadata
+Pseudo code:
+```javascript
+const skeleton = detection["skeleton"] || [];
+for (let s = 0; s < skeleton.length; s++) {
+    const coords = detection["coords"] || [];
+    const [x0, y0] = coords[skeleton[s][0]];
+    const [x1, y1] = coords[skeleton[s][1]];
+    if (!(x0 == 0.0 && y0 == 0.0) && !(x1 == 0.0 && y1 == 0.0)) {
+        context.beginPath();
+        context.strokeStyle = colorsTeknoirBrand.horizon_yellow;
+        context.fillStyle = colorsTeknoirBrand.gold;
+        context.moveTo(x0 * canvas.width, y0 * canvas.height);
+        context.lineTo(x1 * canvas.width, y1 * canvas.height);
+        context.stroke();
+        context.closePath();
+    }
+}
+
+// POSE KEYPOINTS
+function drawDot(x, y, color = 'blue', radius = 2) {
+    context.beginPath();
+    context.strokeStyle = colorsTeknoirBrand.horizon_yellow;
+    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.fillStyle = colorsTeknoirBrand.gold;
+    context.fill();
+    context.closePath();
+}
+const coords = detection["coords"] || [];
+//const keypoints = detection["keypoints"] || [];
+for (let c = 0; c < coords.length; c++) {
+    const [x, y] = coords[c] || [0.0, 0.0];
+    if (!(x == 0.0 && y == 0.0)) {
+        const xc = x * canvas.width;
+        const yc = y * canvas.height;
+        drawDot(xc, yc);
+        //const label = keypoints[c] || "error";
+        //context.fillStyle = colorsTeknoirBrand.gold;
+        //context.fillText(label, xc, (yc + (fontSize - 2) ));
+    }
+};
 ```
 
 ## Development

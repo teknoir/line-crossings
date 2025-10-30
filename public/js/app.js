@@ -177,25 +177,27 @@ async function renderAlertModal(alert) {
       </div>
     </div>
     <div class="annotations-filter" id="annotationsFilter">
-      <h3 style="margin:20px 0 10px; font-size:16px; color:#2c3e50;">Annotation Filters</h3>
-      <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <label for="filterLabels" style="font-size:12px; color:#555;">Labels (comma)</label>
-          <input id="filterLabels" type="text" placeholder="e.g. person,car" style="padding:6px 8px; border:1px solid #ccc; border-radius:4px; min-width:200px;" />
+      <h3 class="h-section">Annotation Filters</h3>
+      <div class="filter-grid">
+        <div class="filter-group wide" id="fg-labels">
+          <label for="filterLabels">Labels (comma)</label>
+          <input id="filterLabels" type="text" placeholder="e.g. person,car" />
         </div>
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <label for="filterIds" style="font-size:12px; color:#555;">Detection IDs (comma)</label>
-          <input id="filterIds" type="text" placeholder="e.g. 123,abc" style="padding:6px 8px; border:1px solid #ccc; border-radius:4px; min-width:200px;" />
+        <div class="filter-group wide" id="fg-ids">
+          <label for="filterIds">Detection IDs (comma)</label>
+          <input id="filterIds" type="text" placeholder="e.g. 123,abc" />
         </div>
-        <div style="display:flex; flex-direction:column; gap:4px;">
-          <label style="font-size:12px; color:#555;">Types</label>
-          <div style="display:flex; gap:12px; padding:6px 8px; border:1px solid #ccc; border-radius:4px; background:#fafafa;">
-            <label style="font-size:12px; display:flex; align-items:center; gap:4px;"><input type="checkbox" id="toggleBoxes" checked /> Boxes</label>
-            <label style="font-size:12px; display:flex; align-items:center; gap:4px;"><input type="checkbox" id="togglePaths" checked /> Paths</label>
+        <div class="filter-group tight" id="fg-types">
+          <label>Types</label>
+          <div class="types-group">
+            <label><input type="checkbox" id="toggleBoxes" checked /> Boxes</label>
+            <label><input type="checkbox" id="togglePaths" checked /> Paths</label>
           </div>
         </div>
-        <button id="applyAnnotationFilters" style="padding:8px 14px; background:#2196F3; color:#fff; border:none; border-radius:4px; cursor:pointer;">Apply</button>
-        <button id="resetAnnotationFilters" style="padding:8px 14px; background:#757575; color:#fff; border:none; border-radius:4px; cursor:pointer;">Reset</button>
+        <div class="filter-actions">
+          <button id="applyAnnotationFilters">Apply</button>
+          <button id="resetAnnotationFilters">Reset</button>
+        </div>
       </div>
     </div>
     <div class="alert-modal-media" id="alertMediaContainer">
@@ -953,87 +955,4 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     pathsCheckbox.checked = true;
     canvasUtils.drawBoundingBoxes(canvas, isVideoActive() ? null : image, metadata, annotationsData, { showBoxes: true, showPaths: true, overlayOnly: isVideoActive() });
   };
-}
-
-function switchToVideo(alert, container, canvas, metadata, annotationsData) {
-  if (!alert.videoUrl) return;
-
-  // Keep existing canvas dimensions
-  const origW = canvas.width;
-  const origH = canvas.height;
-
-  // Create wrapper to overlay canvas atop video
-  container.innerHTML = '';
-  const wrapper = document.createElement('div');
-  wrapper.style.position = 'relative';
-  wrapper.style.width = '100%';
-  wrapper.style.maxHeight = '70vh';
-  wrapper.style.background = '#000';
-  wrapper.style.overflow = 'hidden';
-
-  const video = document.createElement('video');
-  video.controls = true;
-  video.autoplay = true;
-  video.style.width = '100%';
-  video.style.height = '100%';
-  video.style.objectFit = 'contain';
-  video.style.display = 'block';
-
-  const source = document.createElement('source');
-  source.src = alert.videoUrl;
-  source.type = 'video/mp4';
-  video.appendChild(source);
-  wrapper.appendChild(video);
-
-  // Prepare overlay canvas
-  canvas.width = origW;
-  canvas.height = origH;
-  canvas.style.position = 'absolute';
-  canvas.style.top = '0';
-  canvas.style.left = '0';
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
-  canvas.style.pointerEvents = 'none';
-  canvas.style.objectFit = 'contain';
-  canvas.style.zIndex = '2';
-  wrapper.appendChild(canvas);
-
-  container.appendChild(wrapper);
-
-  // Redraw overlay only (no base image) with existing filters (defaults)
-  canvasUtils.drawBoundingBoxes(canvas, null, metadata, annotationsData, { overlayOnly: true, showBoxes: true, showPaths: true });
-
-  // Optional: overlay toggle button
-  const toggleBtn = document.createElement('button');
-  toggleBtn.textContent = 'Toggle Overlay';
-  toggleBtn.style.position = 'absolute';
-  toggleBtn.style.top = '10px';
-  toggleBtn.style.right = '10px';
-  toggleBtn.style.zIndex = '3';
-  toggleBtn.style.background = 'rgba(0,0,0,0.6)';
-  toggleBtn.style.color = '#fff';
-  toggleBtn.style.border = 'none';
-  toggleBtn.style.padding = '6px 10px';
-  toggleBtn.style.borderRadius = '4px';
-  toggleBtn.style.cursor = 'pointer';
-  wrapper.appendChild(toggleBtn);
-  let overlayVisible = true;
-  toggleBtn.onclick = () => { overlayVisible = !overlayVisible; canvas.style.display = overlayVisible ? 'block' : 'none'; };
-
-  // Hint re-added
-  const hint = document.createElement('div');
-  hint.className = 'media-hint';
-  hint.textContent = 'Video playing with overlay';
-  wrapper.appendChild(hint);
-
-  // Handle video load error
-  video.addEventListener('error', () => {
-    container.innerHTML = `
-      <div class="error" style="padding: 30px; text-align: center;">
-        <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;">🎥</div>
-        <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #666;">Video file not available</div>
-        <div style="font-size: 13px; color: #999;">The video file could not be loaded.</div>
-      </div>
-    `;
-  });
 }
