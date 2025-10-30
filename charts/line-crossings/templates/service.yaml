@@ -6,7 +6,7 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: line-crossings
+    application: line-crossings
   ports:
     - name: http
       port: 80

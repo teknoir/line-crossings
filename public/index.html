@@ -5,6 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Line Crossing Alerts - Dev Page</title>
     <link rel="stylesheet" href="css/style.css">
+    <script>
+      // Infer BASE_URL from current location path where index.html is served.
+      (function() {
+        var path = window.location.pathname;
+        // If path ends with '/', keep; else ensure trailing slash for directory resolution
+        // We only want the mounted base segment(s) before index.html assets.
+        // Since assets are served directly under BASE_URL root, we treat full path except last segment if it's a file.
+        // For typical mounting, index.html appears at BASE_URL + '/'.
+        // We'll derive BASE_URL as path without trailing slash, except root.
+        var base = path;
+        // Remove trailing slash(s)
+        base = base.replace(/\/+$/, '');
+        // If base contains a dot (like /foo/index.html) trim to directory
+        if (/\/[^\/]+\.[a-zA-Z0-9]+$/.test(base)) {
+          base = base.replace(/\/[^\/]+$/, '');
+        }
+        if (base === '') base = ''; // root stays empty
+        window.__BASE_URL__ = base; // consumed by api.js
+      })();
+    </script>
 </head>
 <body>
     <div class="container">
