@@ -446,9 +446,116 @@ header h1 {
     margin: 10px 0;
 }
 
+/* Annotations statistics styling */
+.annotations-stats {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-top: 20px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+}
+.annotations-stats h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.annotations-stats .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 15px;
+  width: 100%;
+}
+.annotations-stats .stats-card {
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  min-width: 0;
+}
+.annotations-stats .stats-card .label {
+  font-size: 11px;
+  color: #999;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.annotations-stats .stats-card .value {
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1.1;
+  word-break: break-word;
+}
+.annotations-stats .breakdown, .annotations-stats .score, .annotations-stats .time-range {
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.annotations-stats .label-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+}
+.annotations-stats .label-chip {
+  background: #f5f5f5;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.annotations-stats .avg-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.annotations-stats .avg-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.annotations-stats .avg-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+}
+.annotations-stats .warning-box {
+  background: #fff3cd;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #ffeaa7;
+  color: #856404;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.annotations-stats .metadata-range {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #999;
+  word-break: break-word;
+}
+
 @media (max-width: 1024px) {
     .main-content {
         grid-template-columns: 1fr;
     }
 }
-

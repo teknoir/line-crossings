@@ -217,6 +217,7 @@ async function renderAlertModal(alert) {
         <div class="value">${alert.detection_id || 'N/A'}</div>
       </div>
     </div>
+    <div id="annotationsStatsContainer"></div>
   `;
 
   // Load and display image with option to switch to video
@@ -285,10 +286,18 @@ async function loadAlertImageInModal(alert) {
       });
     }
 
-    // Display annotations statistics below the image
+    // Display annotations statistics below (bottom of modal) instead of inside media container
     if (annotationsData) {
       const statsDiv = renderAnnotationsStats(annotationsData);
-      container.appendChild(statsDiv);
+      const statsContainer = document.getElementById('annotationsStatsContainer');
+      if (statsContainer) {
+        // Ensure existing content replaced (if reloading)
+        statsContainer.innerHTML = '';
+        statsContainer.appendChild(statsDiv);
+      } else {
+        // Fallback: append inside media container if placeholder missing
+        container.appendChild(statsDiv);
+      }
     }
 
   } catch (error) {
@@ -398,18 +407,11 @@ function processAnnotations(annotationsData) {
 function renderAnnotationsStats(annotationsData) {
   const statsDiv = document.createElement('div');
   statsDiv.className = 'annotations-stats';
-  statsDiv.style.cssText = `
-    margin-top: 20px;
-    padding: 20px;
-    background: #f9f9f9;
-    border-radius: 8px;
-    border: 1px solid #e0e0e0;
-  `;
 
   if (!annotationsData || !annotationsData.data) {
     statsDiv.innerHTML = `
-      <h3 style="margin: 0 0 10px 0; color: #666; font-size: 16px;">📊 Annotations Data</h3>
-      <p style="color: #999; margin: 0;">No annotations data available</p>
+      <h3>📊 Annotations Data</h3>
+      <p style="color:#999; margin:0;">No annotations data available</p>
     `;
     return statsDiv;
   }
@@ -417,103 +419,55 @@ function renderAnnotationsStats(annotationsData) {
   const data = annotationsData.data;
   const detections = data.detections || [];
   const metadata = data.metadata || {};
-
-  // Check if there are any detections
   const hasDetections = detections.length > 0;
-
-  // Calculate statistics
   const stats = calculateDetectionStats(detections);
+  const timeRange = metadata.start_time && metadata.end_time ? calculateDuration(metadata.start_time, metadata.end_time) : null;
 
-  // Time range
-  const timeRange = metadata.start_time && metadata.end_time
-    ? calculateDuration(metadata.start_time, metadata.end_time)
-    : null;
+  const labelBreakdownHtml = hasDetections ? Array.from(stats.labelCounts.entries())
+    .sort((a,b)=>b[1]-a[1])
+    .map(([label,count]) => `<div class="label-chip"><span style="font-weight:bold;color:${getLabelColor(label)};">${label}</span><span style="color:#666;">${count}</span></div>`).join('') : '';
 
   statsDiv.innerHTML = `
-    <h3 style="margin: 0 0 15px 0; color: #333; font-size: 16px; display: flex; align-items: center; gap: 8px;">
-      📊 Annotations Statistics
-      ${hasDetections 
-        ? '<span style="background: #4CAF50; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: normal;">Detections Found</span>'
-        : '<span style="background: #FF9800; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: normal;">No Detections</span>'
-      }
-    </h3>
-    
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 15px;">
-      <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
-        <div style="font-size: 11px; color: #999; text-transform: uppercase; margin-bottom: 4px;">Total Detections</div>
-        <div style="font-size: 24px; font-weight: bold; color: ${hasDetections ? '#4CAF50' : '#999'};">${detections.length}</div>
+    <h3>📊 Annotations Statistics ${hasDetections ? '<span style="background:#4CAF50;color:#fff;padding:2px 8px;border-radius:12px;font-size:12px;">Detections Found</span>' : '<span style="background:#FF9800;color:#fff;padding:2px 8px;border-radius:12px;font-size:12px;">No Detections</span>'}</h3>
+
+    <div class="stats-grid">
+      <div class="stats-card">
+        <div class="label">Total Detections</div>
+        <div class="value" style="color:${hasDetections ? '#4CAF50' : '#999'};">${detections.length}</div>
       </div>
-      
-      ${timeRange ? `
-      <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
-        <div style="font-size: 11px; color: #999; text-transform: uppercase; margin-bottom: 4px;">Duration</div>
-        <div style="font-size: 18px; font-weight: bold; color: #2196F3;">${timeRange}</div>
-      </div>
-      ` : ''}
-      
-      ${stats.uniqueLabels.size > 0 ? `
-      <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
-        <div style="font-size: 11px; color: #999; text-transform: uppercase; margin-bottom: 4px;">Unique Labels</div>
-        <div style="font-size: 24px; font-weight: bold; color: #FF9800;">${stats.uniqueLabels.size}</div>
-      </div>
-      ` : ''}
-      
-      ${stats.uniqueObjects.size > 0 ? `
-      <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e0e0e0;">
-        <div style="font-size: 11px; color: #999; text-transform: uppercase; margin-bottom: 4px;">Tracked Objects</div>
-        <div style="font-size: 24px; font-weight: bold; color: #9C27B0;">${stats.uniqueObjects.size}</div>
-      </div>
-      ` : ''}
+      ${timeRange ? `<div class="stats-card">
+        <div class="label">Duration</div>
+        <div class="value" style="font-size:18px;color:#2196F3;">${timeRange}</div>
+      </div>` : ''}
+      ${stats.uniqueLabels.size > 0 ? `<div class="stats-card">
+        <div class="label">Unique Labels</div>
+        <div class="value" style="color:#FF9800;">${stats.uniqueLabels.size}</div>
+      </div>` : ''}
+      ${stats.uniqueObjects.size > 0 ? `<div class="stats-card">
+        <div class="label">Tracked Objects</div>
+        <div class="value" style="color:#9C27B0;">${stats.uniqueObjects.size}</div>
+      </div>` : ''}
     </div>
-    
+
     ${hasDetections ? `
-      <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; margin-bottom: 12px;">
-        <div style="font-size: 13px; font-weight: bold; color: #333; margin-bottom: 10px;">Detection Breakdown by Label</div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-          ${Array.from(stats.labelCounts.entries())
-            .sort((a, b) => b[1] - a[1])
-            .map(([label, count]) => `
-              <div style="background: #f5f5f5; padding: 6px 12px; border-radius: 4px; font-size: 12px;">
-                <span style="font-weight: bold; color: ${getLabelColor(label)};">${label}</span>
-                <span style="color: #666; margin-left: 4px;">${count}</span>
-              </div>
-            `).join('')}
-        </div>
+    <div class="breakdown">
+      <div style="font-size:13px;font-weight:bold;color:#333;margin-bottom:10px;">Detection Breakdown by Label</div>
+      <div class="label-chips">${labelBreakdownHtml}</div>
+    </div>
+    ${stats.avgScore !== null ? `<div class="score">
+      <div style="font-size:13px;font-weight:bold;color:#333;margin-bottom:8px;">Average Confidence Score</div>
+      <div class="avg-bar-wrapper">
+        <div class="avg-bar-track"><div class="avg-bar-fill" style="width:${(stats.avgScore*100).toFixed(1)}%;"></div></div>
+        <div style="font-size:16px;font-weight:bold;color:#4CAF50;min-width:60px;">${(stats.avgScore*100).toFixed(1)}%</div>
       </div>
-      
-      ${stats.avgScore !== null ? `
-      <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; margin-bottom: 12px;">
-        <div style="font-size: 13px; font-weight: bold; color: #333; margin-bottom: 8px;">Average Confidence Score</div>
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="flex: 1; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
-            <div style="height: 100%; background: linear-gradient(90deg, #4CAF50, #8BC34A); width: ${stats.avgScore * 100}%;"></div>
-          </div>
-          <div style="font-size: 16px; font-weight: bold; color: #4CAF50; min-width: 50px;">${(stats.avgScore * 100).toFixed(1)}%</div>
-        </div>
-      </div>
-      ` : ''}
-      
-      ${stats.timeRange.earliest && stats.timeRange.latest ? `
-      <div style="background: white; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0;">
-        <div style="font-size: 13px; font-weight: bold; color: #333; margin-bottom: 8px;">Detection Time Range</div>
-        <div style="font-size: 12px; color: #666;">
-          <div>First: ${new Date(stats.timeRange.earliest).toLocaleString()}</div>
-          <div style="margin-top: 4px;">Last: ${new Date(stats.timeRange.latest).toLocaleString()}</div>
-        </div>
-      </div>
-      ` : ''}
+    </div>` : ''}
     ` : `
-      <div style="background: #fff3cd; padding: 15px; border-radius: 6px; border: 1px solid #ffeaa7; color: #856404;">
-        <div style="font-weight: bold; margin-bottom: 5px;">⚠️ No Detections Found</div>
-        <div style="font-size: 13px;">The annotations file was loaded successfully but contains no detection data.</div>
+      <div class="warning-box">
+        <div style="font-weight:bold;margin-bottom:5px;">⚠️ No Detections Found</div>
+        <div style="font-size:13px;">The annotations file was loaded successfully but contains no detection data.</div>
       </div>
     `}
-    
-    ${metadata.start_time ? `
-      <div style="margin-top: 12px; font-size: 11px; color: #999;">
-        Metadata time range: ${new Date(metadata.start_time).toLocaleString()} - ${metadata.end_time ? new Date(metadata.end_time).toLocaleString() : 'N/A'}
-      </div>
-    ` : ''}
+    ${metadata.start_time ? `<div class="metadata-range">Metadata time range: ${new Date(metadata.start_time).toLocaleString()} - ${metadata.end_time ? new Date(metadata.end_time).toLocaleString() : 'N/A'}</div>` : ''}
   `;
 
   return statsDiv;
