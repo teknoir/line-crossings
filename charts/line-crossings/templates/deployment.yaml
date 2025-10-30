@@ -21,7 +21,7 @@ spec:
             - containerPort: 3000
               name: http
           env:
-            - name: MONGO_URI
+            - name: MONGODB_URI
               valueFrom:
                 secretKeyRef:
                   name: mongodb-credentials
