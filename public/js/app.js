@@ -113,13 +113,11 @@ function createAlertElement(alert) {
   const statusClass = `status-${alert.status || 'new'}`;
 
   div.innerHTML = `
-    <div class="alert-item-header">
-      <span class="alert-id-text">${alert.id || alert._id}</span>
+    <div class="alert-item-content">
       <span class="status-badge ${statusClass}">${alert.status || 'new'}</span>
-    </div>
-    <div class="alert-item-meta">
-      <span>📷 ${alert.peripheral_id || 'Unknown'}</span>
-      <span>🕒 ${timestamp}</span>
+      <span class="alert-id-text">${alert.id || alert._id}</span>
+      <span class="alert-meta-item">📷 ${alert.peripheral_id || 'Unknown'}</span>
+      <span class="alert-meta-item">🕒 ${timestamp}</span>
     </div>
   `;
 
