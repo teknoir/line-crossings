@@ -176,12 +176,32 @@ async function renderAlertModal(alert) {
         ${alert.id || alert._id}
       </div>
     </div>
-    
+    <div class="annotations-filter" id="annotationsFilter">
+      <h3 style="margin:20px 0 10px; font-size:16px; color:#2c3e50;">Annotation Filters</h3>
+      <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label for="filterLabels" style="font-size:12px; color:#555;">Labels (comma)</label>
+          <input id="filterLabels" type="text" placeholder="e.g. person,car" style="padding:6px 8px; border:1px solid #ccc; border-radius:4px; min-width:200px;" />
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label for="filterIds" style="font-size:12px; color:#555;">Detection IDs (comma)</label>
+          <input id="filterIds" type="text" placeholder="e.g. 123,abc" style="padding:6px 8px; border:1px solid #ccc; border-radius:4px; min-width:200px;" />
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:12px; color:#555;">Types</label>
+          <div style="display:flex; gap:12px; padding:6px 8px; border:1px solid #ccc; border-radius:4px; background:#fafafa;">
+            <label style="font-size:12px; display:flex; align-items:center; gap:4px;"><input type="checkbox" id="toggleBoxes" checked /> Boxes</label>
+            <label style="font-size:12px; display:flex; align-items:center; gap:4px;"><input type="checkbox" id="togglePaths" checked /> Paths</label>
+          </div>
+        </div>
+        <button id="applyAnnotationFilters" style="padding:8px 14px; background:#2196F3; color:#fff; border:none; border-radius:4px; cursor:pointer;">Apply</button>
+        <button id="resetAnnotationFilters" style="padding:8px 14px; background:#757575; color:#fff; border:none; border-radius:4px; cursor:pointer;">Reset</button>
+      </div>
+    </div>
     <div class="alert-modal-media" id="alertMediaContainer">
       <div class="loading">Loading media...</div>
       ${alert.videoUrl ? '<div class="media-hint">Click image to play video</div>' : ''}
     </div>
-    
     ${alert.llm_classification && alert.llm_classification.summary ? `
     <div class="alert-modal-summary">
       <h3>🤖 AI Summary</h3>
@@ -300,6 +320,8 @@ async function loadAlertImageInModal(alert) {
       }
     }
 
+    // After appending canvas, wire filter controls
+    setupAnnotationFilterControls(canvas, image, metadata, annotationsData);
   } catch (error) {
     console.error('Error loading image:', error);
     console.error('Image URL was:', alert.imageUrl);
@@ -835,4 +857,49 @@ function showError(message) {
   container.prepend(errorDiv);
 
   setTimeout(() => errorDiv.remove(), 5000);
+}
+
+function setupAnnotationFilterControls(canvas, image, metadata, annotationsData) {
+  const filterPanel = document.getElementById('annotationsFilter');
+  if (!filterPanel) return;
+  // Hide panel if no annotations data
+  if (!annotationsData || !annotationsData.data || !Array.isArray(annotationsData.data.detections) || annotationsData.data.detections.length === 0) {
+    filterPanel.style.display = 'none';
+    return;
+  } else {
+    filterPanel.style.display = 'block';
+  }
+
+  const labelsInput = document.getElementById('filterLabels');
+  const idsInput = document.getElementById('filterIds');
+  const boxesCheckbox = document.getElementById('toggleBoxes');
+  const pathsCheckbox = document.getElementById('togglePaths');
+  const applyBtn = document.getElementById('applyAnnotationFilters');
+  const resetBtn = document.getElementById('resetAnnotationFilters');
+
+  if (!applyBtn || !resetBtn) return; // safety
+
+  const redraw = () => {
+    const rawLabels = labelsInput.value.trim();
+    const rawIds = idsInput.value.trim();
+    const labels = rawLabels ? rawLabels.split(',').map(s => s.trim().toLowerCase()).filter(Boolean) : null;
+    const ids = rawIds ? rawIds.split(',').map(s => s.trim()).filter(Boolean) : null;
+    const showBoxes = boxesCheckbox.checked;
+    const showPaths = pathsCheckbox.checked;
+    canvasUtils.drawBoundingBoxes(canvas, image, metadata, annotationsData, { labels, ids, showBoxes, showPaths });
+  };
+
+  applyBtn.onclick = (e) => {
+    e.preventDefault();
+    redraw();
+  };
+
+  resetBtn.onclick = (e) => {
+    e.preventDefault();
+    labelsInput.value = '';
+    idsInput.value = '';
+    boxesCheckbox.checked = true;
+    pathsCheckbox.checked = true;
+    canvasUtils.drawBoundingBoxes(canvas, image, metadata, annotationsData, { showBoxes: true, showPaths: true });
+  };
 }
