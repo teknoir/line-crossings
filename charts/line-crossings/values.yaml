@@ -1,0 +1,10 @@
+basePath: /line-crossings
+domain: teknoir.cloud
+
+mongo:
+  uri: mongodb://mongo:27017
+  database: alerts
+
+image:
+  repository: us-docker.pkg.dev/teknoir/gcr.io/line-crossings
+  tag: latest

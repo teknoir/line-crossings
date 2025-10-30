@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Line Crossing Alerts - Dev Page</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Line Crossing Alerts</h1>
+            <div class="header-controls">
+                <span id="status">Loading...</span>
+            </div>
+        </header>
+
+        <div class="filters">
+            <input type="text" id="searchInput" placeholder="Search by Alert ID (e.g., nc0009-salefloor-270-155f0f2e-935-lc-exit-0)">
+            <div class="date-filters">
+                <label for="startDate">From:</label>
+                <input type="datetime-local" id="startDate">
+                <label for="endDate">To:</label>
+                <input type="datetime-local" id="endDate">
+            </div>
+            <button id="searchBtn">Search</button>
+            <button id="clearBtn">Clear</button>
+        </div>
+
+        <div class="main-content">
+            <div class="alerts-list">
+                <h2>Alerts</h2>
+                <div id="alertsContainer">
+                    <!-- Alerts will be loaded here -->
+                </div>
+                <div class="pagination" id="pagination">
+                    <!-- Pagination controls will be loaded here -->
+                </div>
+            </div>
+
+            <div class="alert-detail" id="alertDetail">
+                <h2>Alert Details</h2>
+                <div id="detailContent">
+                    <p class="placeholder">Select an alert to view details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for alert details -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content alert-modal-content">
+            <span class="close" id="closeAlertModal">&times;</span>
+            <div id="alertModalContent">
+                <!-- Alert details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for full image view (old modal, keeping for compatibility) -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="imageContainer">
+                <canvas id="imageCanvas"></canvas>
+            </div>
+            <div id="imageMetadata"></div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/canvas.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+

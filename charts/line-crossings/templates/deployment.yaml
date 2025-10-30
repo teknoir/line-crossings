@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: line-crossings
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: line-crossings
+  template:
+    metadata:
+      labels:
+        app: line-crossings
+    spec:
+      containers:
+        - name: line-crossings
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: MONGO_URI
+              value: {{ .Values.mongo.database | quote }}
+            - name: MONGO_DATABASE
+              value: {{ .Values.mongo.database | quote }}
+            - name: BASE_URL
+              value: {{ include "line-crossings.full-base-path" . | quote }}
+            - name: NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: DOMAIN
+              value: {{ .Values.domain | quote }}
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi

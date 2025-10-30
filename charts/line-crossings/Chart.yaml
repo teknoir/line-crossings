@@ -1,0 +1,6 @@
+apiVersion: v2
+name: line-crossings
+description: Helm chart for deploying Line Crossings services.
+type: application
+version: 0.1.9
+appVersion: "0.1.0"

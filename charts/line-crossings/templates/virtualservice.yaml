@@ -1,0 +1,19 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: line-crossings
+  namespace: {{ .Release.Namespace }}
+spec:
+  gateways:
+    - teknoir/teknoir-gateway
+  hosts:
+    - '*'
+  http:
+    - match:
+        - uri:
+            prefix: {{ include "line-crossings.full-base-path" . | quote }}
+      route:
+        - destination:
+            host: line-crossings.{{ .Release.Namespace }}.svc.cluster.local
+            port:
+              number: 80
