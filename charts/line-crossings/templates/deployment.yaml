@@ -25,7 +25,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: mongodb-credentials
-                  key: uri
+                  key: service_uri
             - name: MEDIA_SERVICE_BASE_URL
               value: {{ .Values.mediaServiceBaseUrl | quote }}
             - name: BASE_URL

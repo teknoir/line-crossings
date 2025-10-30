@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -eo pipefail
-set -x
+#set -x
 
 export BRANCH_NAME=${BRANCH_NAME:-"local"}
 export SHORT_SHA=$(date +%Y%m%d-%H%M%S)
@@ -15,14 +15,14 @@ docker buildx build \
 export NAMESPACE=${NAMESPACE:-"demonstrations"}
 
 if [[ $NAMESPACE == "demonstrations" ]] ; then
-  export CONTEXT="gke_teknoir-poc_us-central1-c_teknoir-dev-cluster"
-  export DOMAIN="teknoir.dev"
+  CONTEXT="gke_teknoir-poc_us-central1-c_teknoir-dev-cluster"
+  DOMAIN="teknoir.dev"
 else
-  export CONTEXT="gke_teknoir_us-central1-c_teknoir-cluster"
-  export DOMAIN="teknoir.cloud"
+  CONTEXT="gke_teknoir_us-central1-c_teknoir-cluster"
+  DOMAIN="teknoir.cloud"
 fi
 
-cat << EOF
+cat <<EOF | kubectl --context "$CONTEXT" --namespace "$NAMESPACE" apply -f -
 ---
 apiVersion: helm.cattle.io/v1
 kind: HelmChart
@@ -37,8 +37,7 @@ spec:
     basePath: /${NAMESPACE}/line-crossings
     domain: ${DOMAIN}
     mediaServiceBaseUrl: https://${DOMAIN}/${NAMESPACE}/media-service/api
-
     image:
       repository: ${IMAGE}
       tag: ${BRANCH_NAME}-${SHORT_SHA}
-EOF | kubectl --context $CONTEXT --namespace $NAMESPACE apply -f -
+EOF
