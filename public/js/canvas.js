@@ -92,11 +92,16 @@ const canvasUtils = {
       const idSet = fo.ids instanceof Set ? fo.ids : (Array.isArray(fo.ids) ? new Set(fo.ids) : null);
       const showBoxes = fo.showBoxes !== false;
       const showPaths = fo.showPaths !== false;
+      const frameCutoff = typeof fo.maxFrameIndex === 'number' ? fo.maxFrameIndex : null;
 
       const filtered = detections.filter(d => {
         const lbl = d.label ? d.label.toLowerCase() : null;
         if (labelSet && lbl && !labelSet.has(lbl)) return false;
         if (idSet && d.id && !idSet.has(String(d.id))) return false;
+        if (frameCutoff !== null) {
+          const frameIndex = typeof d.__frameIndex === 'number' ? d.__frameIndex : detections.indexOf(d);
+          if (frameIndex > frameCutoff) return false;
+        }
         return true;
       });
       if (!filtered.length) return;

@@ -4,6 +4,32 @@ let currentPage = 1;
 let currentFilters = {};
 let selectedAlertId = null;
 
+function getAlertIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('alert') || params.get('alertId') || null;
+}
+
+function updateAlertIdInUrl(alertId) {
+  const url = new URL(window.location.href);
+  if (alertId) {
+    url.searchParams.set('alert', alertId);
+  } else {
+    url.searchParams.delete('alert');
+    url.searchParams.delete('alertId');
+  }
+  const search = url.searchParams.toString();
+  const nextUrl = `${url.pathname}${search ? `?${search}` : ''}${url.hash}`;
+  window.history.replaceState({}, '', nextUrl);
+}
+
+function hideAlertModal(options = {}) {
+  const modal = document.getElementById('alertModal');
+  if (modal) modal.style.display = 'none';
+  selectedAlertId = null;
+  document.querySelectorAll('.alert-item').forEach(item => item.classList.remove('selected'));
+  if (!options.skipUrlUpdate) updateAlertIdInUrl(null);
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
   initApp();
@@ -27,6 +53,7 @@ async function initApp() {
   applyDefaultFilters();
   await loadAlerts();
   setupEventListeners();
+  await handleDeepLinkFromUrl({ initial: true });
 }
 
 function setupEventListeners() {
@@ -43,9 +70,9 @@ function setupEventListeners() {
 
   // Alert modal controls
   const alertModal = document.getElementById('alertModal');
-  const closeAlertModal = document.getElementById('closeAlertModal');
-  closeAlertModal.addEventListener('click', () => {
-    alertModal.style.display = 'none';
+  const closeAlertModalBtn = document.getElementById('closeAlertModal');
+  closeAlertModalBtn.addEventListener('click', () => {
+    hideAlertModal();
   });
 
   // Modal controls (old image modal)
@@ -59,8 +86,12 @@ function setupEventListeners() {
       modal.style.display = 'none';
     }
     if (event.target === alertModal) {
-      alertModal.style.display = 'none';
+      hideAlertModal();
     }
+  });
+
+  window.addEventListener('popstate', () => {
+    handleDeepLinkFromUrl({ triggeredByHistory: true });
   });
 }
 
@@ -92,6 +123,7 @@ async function loadAlerts(page = 1) {
 function createAlertElement(alert) {
   const div = document.createElement('div');
   div.className = 'alert-item';
+  div.dataset.alertId = alert._id;
   if (selectedAlertId === alert._id) {
     div.classList.add('selected');
   }
@@ -127,11 +159,14 @@ function renderPagination(pagination) {
   });
 }
 
-async function selectAlert(alertId, elementRef) {
+async function selectAlert(alertId, elementRef, options = {}) {
   selectedAlertId = alertId;
   // Update selection in list
   document.querySelectorAll('.alert-item').forEach(item => item.classList.remove('selected'));
   if (elementRef) elementRef.classList.add('selected');
+  if (!options.skipUrlUpdate) {
+    updateAlertIdInUrl(alertId);
+  }
   const modal = document.getElementById('alertModal');
   const modalContent = document.getElementById('alertModalContent');
   modal.style.display = 'block';
@@ -142,6 +177,22 @@ async function selectAlert(alertId, elementRef) {
   } catch (error) {
     console.error('Error loading alert details:', error);
     modalContent.innerHTML = `<div class="error">Failed to load alert details: ${error.message}</div>`;
+  }
+}
+
+async function handleDeepLinkFromUrl(options = {}) {
+  const alertIdFromUrl = getAlertIdFromUrl();
+  if (alertIdFromUrl) {
+    if (alertIdFromUrl !== selectedAlertId) {
+      const listItem = document.querySelector(`.alert-item[data-alert-id="${alertIdFromUrl}"]`) || null;
+      try {
+        await selectAlert(alertIdFromUrl, listItem, { skipUrlUpdate: true, openingFromUrl: true });
+      } catch (error) {
+        console.error('Failed to open alert from URL:', error);
+      }
+    }
+  } else if (selectedAlertId && options.triggeredByHistory) {
+    hideAlertModal({ skipUrlUpdate: true });
   }
 }
 
@@ -224,6 +275,14 @@ async function renderAlertModal(alert) {
         </div>
       </div>
     </div>
+    <div class="timeline-controls" id="timelineControls" style="display:none;">
+      <div class="timeline-bar">
+        <span class="timeline-title">Frame Timeline</span>
+        <span class="timeline-value" id="timelineValue">All frames</span>
+      </div>
+      <input type="range" id="timelineSlider" min="0" max="0" value="0" step="1" />
+      <div class="timeline-hint" id="timelineHint">Drag to reveal detections over time</div>
+    </div>
     <div class="alert-modal-media" id="alertMediaContainer">
       <div class="loading">Loading media...</div>
       ${alert.videoUrl ? '<div class="media-hint">Click image to play video</div>' : ''}
@@ -233,6 +292,9 @@ async function renderAlertModal(alert) {
       ${burstImages.length ? `<div class="burst-strip" id="burstStrip">${burstImages.map((u,i)=>`<img src='${u}' data-index='${i}' class='burst-thumb ${i===0 && cutoutImage? 'burst-cutout-first':''}' loading='lazy' alt='burst ${i}'/>`).join('')}</div>` : '<div class="burst-strip empty">No burst images</div>'}
     </div>
     <div id="annotationsStatsContainer"></div>`;
+  console.log('[Timeline] Rendered modal markup', {
+    hasTimelineControls: !!document.getElementById('timelineControls')
+  });
   if (alert.imageUrl) loadAlertImageInModal(alert);
   setupBurstGalleryInteractions();
 }
@@ -391,7 +453,15 @@ function switchToVideo(alert, container, canvas, metadata, annotationsData) {
   container.appendChild(wrapper);
 
   // Redraw overlay only (no base image) with existing filters (defaults)
-  canvasUtils.drawBoundingBoxes(canvas, null, metadata, annotationsData, { overlayOnly: true, showBoxes: true, showPaths: true });
+  const overlayOptions = { overlayOnly: true, showBoxes: true, showPaths: true };
+  const timelineSlider = document.getElementById('timelineSlider');
+  if (timelineSlider) {
+    const parsed = Number.parseInt(timelineSlider.value, 10);
+    if (!Number.isNaN(parsed)) {
+      overlayOptions.maxFrameIndex = parsed;
+    }
+  }
+  canvasUtils.drawBoundingBoxes(canvas, null, metadata, annotationsData, overlayOptions);
 
   // Optional: overlay toggle button
   const toggleBtn = document.createElement('button');
@@ -911,12 +981,26 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
   const filterPanel = document.getElementById('annotationsFilter');
   if (!filterPanel) return;
   const mediaContainer = document.getElementById('alertMediaContainer');
+  const timelineControls = document.getElementById('timelineControls');
+  const timelineSlider = document.getElementById('timelineSlider');
+  const timelineValue = document.getElementById('timelineValue');
+  const timelineHint = document.getElementById('timelineHint');
+  console.log('[Timeline] Elements lookup', {
+    hasFilterPanel: !!filterPanel,
+    hasTimelineControls: !!timelineControls,
+    hasSlider: !!timelineSlider,
+    hasTimelineValue: !!timelineValue
+  });
 
   const isVideoActive = () => !!mediaContainer.querySelector('video');
 
   // Hide panel if no annotations data
   if (!annotationsData || !annotationsData.data || !Array.isArray(annotationsData.data.detections) || annotationsData.data.detections.length === 0) {
     filterPanel.style.display = 'none';
+    if (timelineControls) {
+      timelineControls.style.display = 'none';
+    }
+    console.log('[Timeline] No detections found, hiding controls.', { annotationsDataExists: !!annotationsData });
     return;
   } else {
     filterPanel.style.display = 'block';
@@ -931,6 +1015,109 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
 
   if (!applyBtn || !resetBtn) return; // safety
 
+  const detections = annotationsData.data.detections;
+  console.log('[Timeline] Initializing timeline controls', {
+    detectionCount: detections.length,
+    hasTimelineControls: !!timelineControls,
+    hasSlider: !!timelineSlider
+  });
+
+  const formatFrameLabel = (rawTs) => {
+    if (!rawTs) return null;
+    const ts = Date.parse(rawTs);
+    if (Number.isNaN(ts)) return rawTs;
+    const dt = new Date(ts);
+    const time = dt.toLocaleTimeString([], { hour12: false });
+    const millis = String(dt.getMilliseconds()).padStart(3, '0');
+    return `${time}.${millis}`;
+  };
+
+  const buildTimelineFrames = () => {
+    if (!Array.isArray(detections) || detections.length === 0) return [];
+    const decorated = detections.map((d, idx) => {
+      const parsed = d.timestamp ? Date.parse(d.timestamp) : NaN;
+      return {
+        detection: d,
+        idx,
+        ts: Number.isNaN(parsed) ? null : parsed
+      };
+    }).sort((a, b) => {
+      if (a.ts !== null && b.ts !== null) return a.ts - b.ts || a.idx - b.idx;
+      if (a.ts !== null) return -1;
+      if (b.ts !== null) return 1;
+      return a.idx - b.idx;
+    });
+
+    const frames = [];
+    let currentKey = null;
+    decorated.forEach((item) => {
+      const key = item.ts !== null ? `ts-${item.ts}` : `idx-${item.idx}`;
+      if (key !== currentKey) {
+        currentKey = key;
+        frames.push({
+          key,
+          timestamp: item.detection.timestamp || null,
+          label: item.detection.timestamp ? formatFrameLabel(item.detection.timestamp) : `Detection ${item.idx + 1}`
+        });
+      }
+      const frameIndex = frames.length - 1;
+      Object.defineProperty(item.detection, '__frameIndex', {
+        value: frameIndex,
+        enumerable: false,
+        configurable: true,
+        writable: true
+      });
+    });
+    console.log('[Timeline] Frames derived from detections', {
+      detections: detections.length,
+      frameBuckets: frames.length
+    });
+    return frames;
+  };
+
+  const frames = buildTimelineFrames();
+  let activeFrameIndex = frames.length > 0 ? frames.length - 1 : null;
+  console.log('[Timeline] Frames built', { frameCount: frames.length, activeFrameIndex });
+
+  const updateTimelineDisplay = () => {
+    if (!timelineControls || !timelineSlider || !timelineValue) return;
+    if (frames.length <= 1 || typeof activeFrameIndex !== 'number') {
+      timelineValue.textContent = frames.length > 0 ? `All frames (${frames.length})` : 'All frames';
+      if (timelineHint) timelineHint.style.display = 'none';
+      console.log('[Timeline] Display updated: showing all frames', {
+        frameCount: frames.length,
+        activeFrameIndex
+      });
+      return;
+    }
+    if (timelineHint) timelineHint.style.display = 'block';
+    if (activeFrameIndex >= frames.length - 1) {
+      timelineValue.textContent = `All frames (${frames.length})`;
+      console.log('[Timeline] Display at last frame', { activeFrameIndex, frameCount: frames.length });
+      return;
+    }
+    const frame = frames[activeFrameIndex];
+    const label = frame?.label ? ` • ${frame.label}` : '';
+    timelineValue.textContent = `Frame ${activeFrameIndex + 1}/${frames.length}${label}`;
+    console.log('[Timeline] Display partial', { activeFrameIndex, frameCount: frames.length, label: frame?.label });
+  };
+
+  if (timelineControls && timelineSlider && timelineValue) {
+    timelineControls.style.display = 'flex';
+    timelineSlider.min = '0';
+    timelineSlider.max = String(Math.max(frames.length - 1, 0));
+    timelineSlider.step = '1';
+    timelineSlider.value = String(typeof activeFrameIndex === 'number' ? activeFrameIndex : 0);
+    timelineSlider.disabled = frames.length <= 1;
+    console.log('[Timeline] Controls ready', {
+      sliderMin: timelineSlider.min,
+      sliderMax: timelineSlider.max,
+      sliderValue: timelineSlider.value,
+      sliderDisabled: timelineSlider.disabled
+    });
+    updateTimelineDisplay();
+  }
+
   const redraw = () => {
     const rawLabels = labelsInput.value.trim();
     const rawIds = idsInput.value.trim();
@@ -938,7 +1125,11 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     const ids = rawIds ? rawIds.split(',').map(s => s.trim()).filter(Boolean) : null;
     const showBoxes = boxesCheckbox.checked;
     const showPaths = pathsCheckbox.checked;
-    canvasUtils.drawBoundingBoxes(canvas, isVideoActive() ? null : image, metadata, annotationsData, { labels, ids, showBoxes, showPaths, overlayOnly: isVideoActive() });
+    const options = { labels, ids, showBoxes, showPaths, overlayOnly: isVideoActive() };
+    if (typeof activeFrameIndex === 'number') {
+      options.maxFrameIndex = activeFrameIndex;
+    }
+    canvasUtils.drawBoundingBoxes(canvas, isVideoActive() ? null : image, metadata, annotationsData, options);
   };
 
   applyBtn.onclick = (e) => { e.preventDefault(); redraw(); };
@@ -948,6 +1139,26 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     idsInput.value = '';
     boxesCheckbox.checked = true;
     pathsCheckbox.checked = true;
-    canvasUtils.drawBoundingBoxes(canvas, isVideoActive() ? null : image, metadata, annotationsData, { showBoxes: true, showPaths: true, overlayOnly: isVideoActive() });
+    if (timelineSlider && frames.length > 0) {
+      activeFrameIndex = frames.length - 1;
+      timelineSlider.value = String(activeFrameIndex);
+      updateTimelineDisplay();
+    }
+    const options = { showBoxes: true, showPaths: true, overlayOnly: isVideoActive() };
+    if (typeof activeFrameIndex === 'number') options.maxFrameIndex = activeFrameIndex;
+    canvasUtils.drawBoundingBoxes(canvas, isVideoActive() ? null : image, metadata, annotationsData, options);
   };
+
+  if (timelineSlider && frames.length > 1) {
+    const onScrubChange = (value) => {
+      const parsed = Number.parseInt(value, 10);
+      if (Number.isNaN(parsed)) return;
+      activeFrameIndex = Math.min(Math.max(parsed, 0), frames.length - 1);
+      console.log('[Timeline] Scrub change', { newIndex: activeFrameIndex, framesCount: frames.length });
+      updateTimelineDisplay();
+      redraw();
+    };
+    timelineSlider.addEventListener('input', (event) => onScrubChange(event.target.value));
+    timelineSlider.addEventListener('change', (event) => onScrubChange(event.target.value));
+  }
 }

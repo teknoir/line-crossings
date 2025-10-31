@@ -846,6 +846,44 @@ header { margin-bottom: var(--space-section); }
 /* Headline spacing tweak */
 .annotations-filter h3 { margin-bottom: 8px !important; }
 
+/* Timeline scrub controls */
+.timeline-controls {
+  margin: 14px 0 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.timeline-controls .timeline-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--tek-off-white);
+  font-weight: 600;
+}
+.timeline-controls .timeline-value {
+  font-size: 12px;
+  text-transform: none;
+  font-weight: 500;
+  color: #d0d2d6;
+}
+.timeline-controls input[type="range"] {
+  width: 100%;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+.timeline-controls .timeline-hint {
+  font-size: 11px;
+  color: #9ca0a8;
+  letter-spacing: .3px;
+}
+
 /* Mobile fallback: wrap instead of horizontal scroll */
 @media (max-width: 900px) {
   .annotations-filter .filter-grid { flex-wrap: wrap; overflow-x: visible; }
