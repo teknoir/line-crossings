@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const { connectToDatabase } = require('./utils/db');
 const alertsRouter = require('./routes/alerts');
+const burstsRouter = require('./routes/bursts');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,6 +37,7 @@ baseRouter.use((req, res, next) => {
 
 // API Routes under BASE_URL (/BASE_URL/api/...)
 baseRouter.use('/api/alerts', alertsRouter);
+baseRouter.use('/api/bursts', burstsRouter);
 
 baseRouter.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), baseUrl: BASE_URL || '/' });

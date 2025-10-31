@@ -58,6 +58,37 @@
                 </div>
             </div>
         </div>
+        <div class="burst-preview-section" id="burstPreviewSection">
+            <div class="burst-preview-header">
+                <h2 class="h-section">Burst Preview</h2>
+                <div class="burst-preview-controls">
+                    <label class="bp-control">
+                        <span>Date</span>
+                        <input type="date" id="burstDate">
+                    </label>
+                    <div class="bp-control">
+                        <span>Direction</span>
+                        <div class="bp-radio-group">
+                            <label><input type="radio" name="burstDirection" value="entry"> Entry</label>
+                            <label><input type="radio" name="burstDirection" value="exit"> Exit</label>
+                            <label><input type="radio" name="burstDirection" value="both" checked> Both</label>
+                        </div>
+                    </div>
+                    <label class="bp-control">
+                        <span>Camera (optional)</span>
+                        <input type="text" id="burstCamera" placeholder="e.g. nc0009-salefloor-270">
+                    </label>
+                    <button id="burstLoadBtn">Load Bursts</button>
+                </div>
+            </div>
+            <div class="burst-preview-status" id="burstPreviewStatus"></div>
+            <div class="burst-preview-viewer" id="burstPreviewViewer">
+                <p class="placeholder">Select a burst to preview.</p>
+            </div>
+            <div class="burst-preview-grid" id="burstPreviewGrid">
+                <p class="placeholder">Select filters above and click “Load Bursts” to preview cutouts.</p>
+            </div>
+        </div>
     </div>
 
     <!-- Modal for alert details -->

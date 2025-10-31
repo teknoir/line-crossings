@@ -55,5 +55,22 @@ const api = {
       throw new Error(`Failed to fetch metadata: ${response.statusText}`);
     }
     return response.json();
+  },
+
+  // Fetch burst previews with filters
+  async getBursts(filters = {}) {
+    const params = new URLSearchParams();
+    if (filters.date) params.append('date', filters.date);
+    if (filters.direction && filters.direction !== 'both') params.append('direction', filters.direction);
+    if (filters.camera) params.append('camera', filters.camera);
+    if (filters.limit) params.append('limit', filters.limit);
+    const qs = params.toString();
+    try {
+      const response = await fetch(`${API_BASE}/bursts${qs ? `?${qs}` : ''}`);
+      if (!response.ok) throw new Error(`Failed to fetch bursts: ${response.status} ${response.statusText}`);
+      return await response.json();
+    } catch (err) {
+      throw new Error(`Network error fetching bursts: ${err.message}`);
+    }
   }
 };
