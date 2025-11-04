@@ -12,6 +12,144 @@ let burstSpotlightSelectedCard = null;
 let burstSpotlightCurrentImage = null;
 let burstSpotlightCurrentBurst = null;
 
+let lineCrossingCameraConfigMap = new Map();
+let lineCrossingConfigLoaded = false;
+
+async function loadLineCrossingConfig() {
+  if (lineCrossingConfigLoaded) return;
+  const base = (window.__BASE_URL__ || '').replace(/\/+$/, '');
+  const url = `${base}/data/line-crossings-config.json`.replace(/^\/\//, '/');
+  try {
+    const response = await fetch(url, { cache: 'no-cache' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    const nextMap = new Map();
+    if (Array.isArray(data)) {
+      data.forEach((cfg) => {
+        if (cfg && cfg.name) {
+          nextMap.set(cfg.name, cfg);
+        }
+      });
+    }
+    lineCrossingCameraConfigMap = nextMap;
+  } catch (error) {
+    console.warn('Failed to load line crossing camera configuration:', error);
+    lineCrossingCameraConfigMap = new Map();
+  } finally {
+    lineCrossingConfigLoaded = true;
+  }
+}
+
+function parsePolylineString(polyString) {
+  if (!polyString || typeof polyString !== 'string') return [];
+  const parts = polyString.split(';').map(part => Number.parseFloat(part.trim())).filter(num => Number.isFinite(num));
+  const points = [];
+  for (let i = 0; i < parts.length - 1; i += 2) {
+    points.push({ x: parts[i], y: parts[i + 1] });
+  }
+  return points;
+}
+
+function escapeAttributeValue(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function formatLineCrossingTooltip(config) {
+  if (!config || !Array.isArray(config.lines) || config.lines.length === 0) return '';
+  const lines = config.lines.map((line) => {
+    const points = Array.isArray(line.points) ? line.points : [];
+    if (!points || points.length === 0) {
+      return `${line.id || 'line'}: n/a`;
+    }
+    const coordStr = points.map(pt => `${Math.round(pt.x)},${Math.round(pt.y)}`).join(' -> ');
+    return `${line.id || 'line'}: ${coordStr}`;
+  });
+  return lines.join('\n');
+}
+
+function buildLineCrossingPayload(config) {
+  if (!config) return null;
+  if (config.__lcPayload) return config.__lcPayload;
+  const configWidth = Number.isFinite(config.configWidth) ? config.configWidth : 1920;
+  const configHeight = Number.isFinite(config.configHeight) ? config.configHeight : 1080;
+  const entries = config.lcConfig || {};
+  const lines = Object.entries(entries).map(([key, value]) => {
+    const points = parsePolylineString(value);
+    if (!points.length) return null;
+    const lcKeyLower = key.toLowerCase();
+    const category = lcKeyLower.includes('exit') ? 'exit' : 'entry';
+    const stroke = category === 'exit' ? '#E53935' : '#4CAF50';
+    const displayLabel = key.replace(/^lc[-_]?/i, 'LC ').replace(/[-_]/g, ' ');
+    const centroid = points.reduce((acc, point) => {
+      acc.x += point.x;
+      acc.y += point.y;
+      return acc;
+    }, { x: 0, y: 0 });
+    centroid.x /= points.length;
+    centroid.y /= points.length;
+    return {
+      id: key,
+      displayLabel,
+      category,
+      stroke,
+      points,
+      centroid
+    };
+  }).filter(Boolean);
+
+  const payload = {
+    cameraName: config.name,
+    configWidth,
+    configHeight,
+    lines
+  };
+  config.__lcPayload = payload;
+  return payload;
+}
+
+function resolveCameraConfigForAlert(alert) {
+  if (!alert) return null;
+  const candidates = [];
+  if (alert.peripheral_id) candidates.push(alert.peripheral_id);
+  if (alert.peripheral && typeof alert.peripheral === 'string') candidates.push(alert.peripheral);
+  if (alert.peripheral && typeof alert.peripheral.name === 'string') candidates.push(alert.peripheral.name);
+  if (alert.from_device) candidates.push(alert.from_device);
+  const alertId = alert.id || alert.detection_id || '';
+  if (alertId) {
+    const prefix = alertId.split('-lc-')[0];
+    if (prefix) candidates.push(prefix);
+    candidates.push(alertId);
+  }
+  for (const name of candidates) {
+    if (!name) continue;
+    const cfg = lineCrossingCameraConfigMap.get(name);
+    if (cfg) return cfg;
+  }
+  if (alertId) {
+    let bestMatch = null;
+    lineCrossingCameraConfigMap.forEach((cfg, name) => {
+      if (alertId.startsWith(name) && (!bestMatch || name.length > bestMatch.name.length)) {
+        bestMatch = cfg;
+      }
+    });
+    if (bestMatch) return bestMatch;
+  }
+  return null;
+}
+
+function getLineCrossingConfigForAlert(alert) {
+  const rawConfig = resolveCameraConfigForAlert(alert);
+  if (!rawConfig) return null;
+  const payload = buildLineCrossingPayload(rawConfig);
+  if (!payload || !Array.isArray(payload.lines) || payload.lines.length === 0) return null;
+  return payload;
+}
+
 function getAlertIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
   return params.get('alert') || params.get('alertId') || null;
@@ -59,6 +197,7 @@ async function initApp() {
   // Set default 24h range and apply filters
   setDefaultDateRange24h();
   applyDefaultFilters();
+  await loadLineCrossingConfig();
   await loadAlerts();
   setupEventListeners();
   setupBurstPreviewControls();
@@ -529,6 +668,10 @@ function buildLineCrossingDetails(alert) {
   const classifierHtml = classifiers.length ? classifiers.map(c => `<div class='classifier-chip'><span>${c.label}</span><span>${(c.score*100).toFixed(1)}%</span></div>`).join('') : '<div class="classifier-none">None</div>';
   const pose = enrichment.pose || null;
   const poseHtml = pose ? `<span>${pose.coords.length} keypoints / ${pose.skeleton.length} edges</span>` : '<span class="muted">No pose</span>';
+  const lcConfig = getLineCrossingConfigForAlert(alert);
+  const lcOverlayStatus = lcConfig ? `Available (${lcConfig.cameraName})` : 'Not configured';
+  const lcTooltip = formatLineCrossingTooltip(lcConfig);
+  const lcTooltipAttr = lcTooltip ? ` title="${escapeAttributeValue(lcTooltip)}"` : '';
   let multiDirHtml = '';
   if (enrichment.multiDirections) {
     const dirs = Object.keys(enrichment.multiDirections).filter(Boolean);
@@ -543,6 +686,7 @@ function buildLineCrossingDetails(alert) {
       <div class="line-details-row">
         <div class="info-card ld-card"><h3>Direction</h3><div class="value">${direction}</div></div>
         <div class="info-card ld-card"><h3>Line ID</h3><div class="value">${lineId}</div></div>
+        <div class="info-card ld-card"><h3>LC Overlay</h3><div class="value"${lcTooltipAttr}>${lcOverlayStatus}</div></div>
         <div class="info-card ld-card"><h3>Camera ID</h3><div class="value">${cameraId}</div></div>
         <div class="info-card ld-card"><h3>Device ID</h3><div class="value">${deviceId}</div></div>
         <div class="info-card ld-card"><h3>Start Time</h3><div class="value">${startTime}</div></div>
@@ -587,6 +731,7 @@ async function renderAlertModal(alert) {
           <div class="types-group">
             <label><input type="checkbox" id="toggleBoxes" checked /> Boxes</label>
             <label><input type="checkbox" id="togglePaths" checked /> Paths</label>
+            <label><input type="checkbox" id="toggleLineCrossings" /> Line crossings</label>
           </div>
         </div>
         <div class="filter-actions">
@@ -666,6 +811,9 @@ async function loadAlertImageInModal(alert) {
 
     // Create canvas with image and bounding boxes
     const canvas = document.createElement('canvas');
+    const lineCrossingConfig = getLineCrossingConfigForAlert(alert);
+    canvas.__lineCrossingConfig = lineCrossingConfig || null;
+    canvas.dataset.cameraConfigName = lineCrossingConfig ? lineCrossingConfig.cameraName : '';
     canvasUtils.drawBoundingBoxes(canvas, image, metadata, annotationsData);
 
     container.innerHTML = '';
@@ -744,8 +892,8 @@ function switchToVideo(alert, container, canvas, metadata, annotationsData) {
   wrapper.style.overflow = 'hidden';
 
   const video = document.createElement('video');
-  video.controls = true;
   video.autoplay = true;
+  video.playsInline = true;
   video.style.width = '100%';
   video.style.height = '100%';
   video.style.objectFit = 'contain';
@@ -772,6 +920,150 @@ function switchToVideo(alert, container, canvas, metadata, annotationsData) {
 
   container.appendChild(wrapper);
 
+  const formatTimecode = (seconds) => {
+    if (!Number.isFinite(seconds)) return '--:--';
+    const totalSeconds = Math.max(0, Math.floor(seconds));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
+    return `${minutes}:${String(secs).padStart(2, '0')}`;
+  };
+
+  // Dedicated video controls (play/pause + scrub bar)
+  const scrubControls = document.createElement('div');
+  scrubControls.className = 'video-scrub-controls';
+
+  const playPauseBtn = document.createElement('button');
+  playPauseBtn.type = 'button';
+  playPauseBtn.className = 'video-control-btn';
+  playPauseBtn.textContent = 'Pause';
+
+  const currentTimeLabel = document.createElement('span');
+  currentTimeLabel.className = 'video-time video-time-current';
+  currentTimeLabel.textContent = '0:00';
+
+  const scrubber = document.createElement('input');
+  scrubber.type = 'range';
+  scrubber.className = 'video-scrub-bar';
+  scrubber.min = '0';
+  scrubber.max = '0';
+  scrubber.step = '0.01';
+  scrubber.value = '0';
+  scrubber.disabled = true;
+
+  const durationLabel = document.createElement('span');
+  durationLabel.className = 'video-time video-time-duration';
+  durationLabel.textContent = '--:--';
+
+  scrubControls.appendChild(playPauseBtn);
+  scrubControls.appendChild(currentTimeLabel);
+  scrubControls.appendChild(scrubber);
+  scrubControls.appendChild(durationLabel);
+  container.appendChild(scrubControls);
+
+  let isScrubbing = false;
+
+  const syncScrubberToVideo = () => {
+    currentTimeLabel.textContent = formatTimecode(video.currentTime);
+    if (scrubber.disabled) return;
+    if (!Number.isFinite(video.duration)) return;
+    if (isScrubbing) return;
+    scrubber.value = String(video.currentTime);
+  };
+
+  const enableScrubberIfReady = () => {
+    if (Number.isFinite(video.duration) && video.duration > 0) {
+      scrubber.max = String(video.duration);
+      scrubber.disabled = false;
+      durationLabel.textContent = formatTimecode(video.duration);
+    } else {
+      scrubber.disabled = true;
+      durationLabel.textContent = '--:--';
+    }
+    currentTimeLabel.textContent = formatTimecode(video.currentTime);
+    if (!scrubber.disabled) {
+      scrubber.value = String(video.currentTime);
+    }
+  };
+
+  const updatePlayState = () => {
+    const isPlaying = !video.paused && !video.ended;
+    playPauseBtn.textContent = isPlaying ? 'Pause' : 'Play';
+    playPauseBtn.dataset.state = isPlaying ? 'playing' : 'paused';
+  };
+
+  const requestPlay = () => {
+    const playPromise = video.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch((err) => {
+        console.warn('Video play blocked:', err);
+        updatePlayState();
+      });
+    }
+  };
+
+  playPauseBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    if (video.paused || video.ended) {
+      requestPlay();
+    } else {
+      video.pause();
+    }
+  });
+
+  video.addEventListener('click', () => {
+    if (video.paused || video.ended) {
+      requestPlay();
+    } else {
+      video.pause();
+    }
+  });
+
+  video.addEventListener('loadedmetadata', enableScrubberIfReady);
+  video.addEventListener('loadeddata', enableScrubberIfReady);
+  video.addEventListener('timeupdate', syncScrubberToVideo);
+  video.addEventListener('ended', () => {
+    syncScrubberToVideo();
+    isScrubbing = false;
+    updatePlayState();
+  });
+  video.addEventListener('play', updatePlayState);
+  video.addEventListener('pause', updatePlayState);
+
+  enableScrubberIfReady();
+  updatePlayState();
+
+  scrubber.addEventListener('input', (event) => {
+    if (scrubber.disabled) return;
+    isScrubbing = true;
+    const newTime = Number.parseFloat(event.target.value);
+    if (Number.isFinite(newTime)) {
+      currentTimeLabel.textContent = formatTimecode(newTime);
+      try {
+        video.currentTime = newTime;
+      } catch (err) {
+        console.warn('Failed to seek video:', err);
+      }
+    }
+  });
+
+  scrubber.addEventListener('change', (event) => {
+    if (scrubber.disabled) return;
+    const newTime = Number.parseFloat(event.target.value);
+    if (Number.isFinite(newTime)) {
+      currentTimeLabel.textContent = formatTimecode(newTime);
+      try {
+        video.currentTime = newTime;
+      } catch (err) {
+        console.warn('Failed to seek video on change:', err);
+      }
+    }
+    isScrubbing = false;
+  });
+
   // Redraw overlay only (no base image) with existing filters (defaults)
   const overlayOptions = { overlayOnly: true, showBoxes: true, showPaths: true };
   const timelineSlider = document.getElementById('timelineSlider');
@@ -780,6 +1072,13 @@ function switchToVideo(alert, container, canvas, metadata, annotationsData) {
     if (!Number.isNaN(parsed)) {
       overlayOptions.maxFrameIndex = parsed;
     }
+  }
+  const lineCrossingsCheckbox = document.getElementById('toggleLineCrossings');
+  if (lineCrossingsCheckbox && !lineCrossingsCheckbox.disabled && canvas.__lineCrossingConfig) {
+    if (!lineCrossingsCheckbox.checked) {
+      lineCrossingsCheckbox.checked = true;
+    }
+    overlayOptions.lineCrossings = canvas.__lineCrossingConfig;
   }
   canvasUtils.drawBoundingBoxes(canvas, null, metadata, annotationsData, overlayOptions);
 
@@ -1314,13 +1613,20 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
 
   const isVideoActive = () => !!mediaContainer.querySelector('video');
 
-  // Hide panel if no annotations data
-  if (!annotationsData || !annotationsData.data || !Array.isArray(annotationsData.data.detections) || annotationsData.data.detections.length === 0) {
+  const lineCrossingsCheckbox = document.getElementById('toggleLineCrossings');
+  const lineCrossingConfig = canvas.__lineCrossingConfig || null;
+  const hasLineCrossingConfig = !!(lineCrossingConfig && Array.isArray(lineCrossingConfig.lines) && lineCrossingConfig.lines.length > 0);
+
+  const detections = Array.isArray(annotationsData?.data?.detections) ? annotationsData.data.detections : [];
+  const hasDetections = detections.length > 0;
+
+  // Hide panel if no annotations data and no line crossing config
+  if (!hasDetections && !hasLineCrossingConfig) {
     filterPanel.style.display = 'none';
     if (timelineControls) {
       timelineControls.style.display = 'none';
     }
-    console.log('[Timeline] No detections found, hiding controls.', { annotationsDataExists: !!annotationsData });
+    console.log('[Timeline] Nothing to display, hiding controls.', { annotationsDataExists: !!annotationsData, hasLineCrossingConfig });
     return;
   } else {
     filterPanel.style.display = 'block';
@@ -1333,13 +1639,31 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
   const applyBtn = document.getElementById('applyAnnotationFilters');
   const resetBtn = document.getElementById('resetAnnotationFilters');
 
+  if (lineCrossingsCheckbox) {
+    if (!hasLineCrossingConfig) {
+      lineCrossingsCheckbox.checked = false;
+      lineCrossingsCheckbox.disabled = true;
+      const lcLabel = lineCrossingsCheckbox.closest('label');
+      if (lcLabel) lcLabel.classList.add('disabled');
+    } else {
+      lineCrossingsCheckbox.disabled = false;
+      lineCrossingsCheckbox.checked = true;
+      const lcLabel = lineCrossingsCheckbox.closest('label');
+      if (lcLabel) lcLabel.classList.remove('disabled');
+      const cameraName = canvas.dataset.cameraConfigName || lineCrossingConfig.cameraName;
+      if (cameraName) {
+        lineCrossingsCheckbox.title = `Line crossings: ${cameraName}`;
+      }
+    }
+  }
+
   if (!applyBtn || !resetBtn) return; // safety
 
-  const detections = annotationsData.data.detections;
   console.log('[Timeline] Initializing timeline controls', {
     detectionCount: detections.length,
     hasTimelineControls: !!timelineControls,
-    hasSlider: !!timelineSlider
+    hasSlider: !!timelineSlider,
+    hasLineCrossings: hasLineCrossingConfig
   });
 
   const formatFrameLabel = (rawTs) => {
@@ -1422,7 +1746,7 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     console.log('[Timeline] Display partial', { activeFrameIndex, frameCount: frames.length, label: frame?.label });
   };
 
-  if (timelineControls && timelineSlider && timelineValue) {
+  if (hasDetections && timelineControls && timelineSlider && timelineValue) {
     timelineControls.style.display = 'flex';
     timelineSlider.min = '0';
     timelineSlider.max = String(Math.max(frames.length - 1, 0));
@@ -1436,6 +1760,8 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
       sliderDisabled: timelineSlider.disabled
     });
     updateTimelineDisplay();
+  } else if (timelineControls) {
+    timelineControls.style.display = 'none';
   }
 
   const redraw = () => {
@@ -1449,6 +1775,9 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     if (typeof activeFrameIndex === 'number') {
       options.maxFrameIndex = activeFrameIndex;
     }
+    if (hasLineCrossingConfig && lineCrossingsCheckbox && lineCrossingsCheckbox.checked) {
+      options.lineCrossings = lineCrossingConfig;
+    }
     canvasUtils.drawBoundingBoxes(canvas, isVideoActive() ? null : image, metadata, annotationsData, options);
   };
 
@@ -1459,6 +1788,9 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     idsInput.value = '';
     boxesCheckbox.checked = true;
     pathsCheckbox.checked = true;
+    if (lineCrossingsCheckbox && !lineCrossingsCheckbox.disabled) {
+      lineCrossingsCheckbox.checked = true;
+    }
     if (timelineSlider && frames.length > 0) {
       activeFrameIndex = frames.length - 1;
       timelineSlider.value = String(activeFrameIndex);
@@ -1466,10 +1798,17 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     }
     const options = { showBoxes: true, showPaths: true, overlayOnly: isVideoActive() };
     if (typeof activeFrameIndex === 'number') options.maxFrameIndex = activeFrameIndex;
+    if (hasLineCrossingConfig && lineCrossingsCheckbox && lineCrossingsCheckbox.checked) {
+      options.lineCrossings = lineCrossingConfig;
+    }
     canvasUtils.drawBoundingBoxes(canvas, isVideoActive() ? null : image, metadata, annotationsData, options);
   };
 
-  if (timelineSlider && frames.length > 1) {
+  if (lineCrossingsCheckbox && !lineCrossingsCheckbox.disabled) {
+    lineCrossingsCheckbox.addEventListener('change', () => redraw());
+  }
+
+  if (hasDetections && timelineSlider && frames.length > 1) {
     const onScrubChange = (value) => {
       const parsed = Number.parseInt(value, 10);
       if (Number.isNaN(parsed)) return;

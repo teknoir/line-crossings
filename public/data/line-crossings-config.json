@@ -1,0 +1,74 @@
+[
+  {
+    "name": "nc0211-front-door-1",
+    "configWidth": 1920,
+    "configHeight": 1080,
+    "lcConfig": {
+      "lc-Entry-0": "879;497;862;697;762;688;962;705",
+      "lc-Exit-0": "844;896;862;697;962;705;762;688"
+    }
+  },
+  {
+    "name": "nc0211-front-door-2",
+    "configWidth": 1920,
+    "configHeight": 1080,
+    "lcConfig": {
+      "lc-Entry-0": "997;448;998;648;900;649;1096;648",
+      "lc-Exit-0": "999;848;998;648;1096;648;900;649"
+    }
+  },
+  {
+    "name": "nc0211-backroom-safe-door-90",
+    "configWidth": 1920,
+    "configHeight": 1080,
+    "lcConfig": {
+      "lc-back-room-Entry-0": "1354;502;1344;702;1171;693;1517;710",
+      "lc-back-room-Exit-0": "1334;901;1344;702;1517;710;1171;693"
+    }
+  },
+  {
+    "name": "nc0211-backroom-safe-door-180",
+    "configWidth": 1920,
+    "configHeight": 1080,
+    "lcConfig": {
+      "lc-back-room-Entry-0": "837;626;827;826;702;819;952;832",
+      "lc-back-room-Exit-0": "817;1025;827;826;952;832;702;819"
+    }
+  },
+  {
+    "name": "nc0211-safe-back-door-270",
+    "configWidth": 1920,
+    "configHeight": 1080,
+    "lcConfig": {
+      "lc-back-room-Entry-0": "920;428;874;622;746;592;1002;653",
+      "lc-back-room-Exit-0": "827;817;874;622;1002;653;746;592"
+    }
+  },
+  {
+    "name": "nc0009-salefloor-270",
+    "configWidth": 1920,
+    "configHeight": 1080,
+    "lcConfig": {
+      "lc-Entry-0": "1180;284;1171;484;1082;480;1259;488",
+      "lc-Exit-0": "1161;683;1171;484;1259;488;1082;480"
+    }
+  },
+  {
+    "name": "nc0009-backroom-safe-180",
+    "configWidth": 1920,
+    "configHeight": 1080,
+    "lcConfig": {
+      "lc-back-room-Entry-0": "892;452;883;652;794;648;973;656",
+      "lc-back-room-Exit-0": "874;852;883;652;973;656;794;648"
+    }
+  },
+  {
+    "name": "nc0009-back-door",
+    "configWidth": 1920,
+    "configHeight": 1080,
+    "lcConfig": {
+      "lc-back-room-Entry-0": "705;586;745;782;590;813;899;750",
+      "lc-back-room-Exit-0": "784;978;745;782;899;750;590;813"
+    }
+  }
+]

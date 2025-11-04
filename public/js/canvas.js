@@ -24,6 +24,87 @@ const canvasUtils = {
     });
   },
 
+  drawLineCrossings(ctx, lineConfig, canvasWidth, canvasHeight) {
+    if (!lineConfig || !Array.isArray(lineConfig.lines) || lineConfig.lines.length === 0) return;
+    const configWidth = lineConfig.configWidth || canvasWidth;
+    const configHeight = lineConfig.configHeight || canvasHeight;
+    const scaleX = configWidth ? canvasWidth / configWidth : 1;
+    const scaleY = configHeight ? canvasHeight / configHeight : 1;
+
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    lineConfig.lines.forEach((line) => {
+      const points = Array.isArray(line.points) ? line.points : [];
+      if (!Array.isArray(points) || points.length < 2) return;
+
+      ctx.beginPath();
+      points.forEach((pt, index) => {
+        const x = pt.x * scaleX;
+        const y = pt.y * scaleY;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = line.stroke || '#00BCD4';
+      ctx.stroke();
+
+      let tailIndex = points.length - 1;
+      let headIndex = points.length - 2;
+      if (tailIndex >= 0 && points[tailIndex].x === points[0].x && points[tailIndex].y === points[0].y) {
+        tailIndex = points.length - 2;
+        headIndex = points.length - 3;
+      }
+      if (tailIndex >= 0 && headIndex >= 0) {
+        const tail = points[tailIndex];
+        const head = points[headIndex];
+        const tailX = tail.x * scaleX;
+        const tailY = tail.y * scaleY;
+        const headX = head.x * scaleX;
+        const headY = head.y * scaleY;
+        const angle = Math.atan2(tailY - headY, tailX - headX);
+        this.drawTriangleMarker(ctx, tailX, tailY, angle, line.stroke || '#00BCD4', 12);
+      }
+
+      if (line.displayLabel) {
+        let cx;
+        let cy;
+        if (line.centroid && Number.isFinite(line.centroid.x) && Number.isFinite(line.centroid.y)) {
+          cx = line.centroid.x * scaleX;
+          cy = line.centroid.y * scaleY;
+        } else {
+          const summed = points.reduce((acc, pt) => {
+            acc.x += pt.x;
+            acc.y += pt.y;
+            return acc;
+          }, { x: 0, y: 0 });
+          cx = (summed.x / points.length) * scaleX;
+          cy = (summed.y / points.length) * scaleY;
+        }
+        const label = line.displayLabel;
+        ctx.font = '12px "Helvetica Neue", Arial, sans-serif';
+        ctx.textBaseline = 'middle';
+        const metrics = ctx.measureText(label);
+        const paddingX = 6;
+        const boxWidth = metrics.width + paddingX * 2;
+        const boxHeight = 18;
+        const rectX = cx - boxWidth / 2;
+        const rectY = cy - boxHeight / 2;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.fillRect(rectX, rectY, boxWidth, boxHeight);
+        ctx.strokeStyle = line.stroke || '#FFFFFF';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(rectX, rectY, boxWidth, boxHeight);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(label, cx - metrics.width / 2, cy);
+      }
+    });
+
+    ctx.restore();
+  },
+
   // Generate / fetch stable stroke color per detection id (independent of label)
   getStrokeColorForId(detection, index) {
     if (detection && detection.id) {
@@ -76,6 +157,7 @@ const canvasUtils = {
         ctx.drawImage(image, 0, 0, baseWidth, baseHeight);
       }
 
+      const hasLineCrossings = Array.isArray(fo.lineCrossings?.lines) && fo.lineCrossings.lines.length > 0;
       let detections = [];
       if (annotationsData && annotationsData.data && Array.isArray(annotationsData.data.detections)) {
         detections = annotationsData.data.detections;
@@ -86,7 +168,7 @@ const canvasUtils = {
           detections = metadata.boxes.map(b => ({ _legacyPixels: true, x: b.x, y: b.y, width: b.width, height: b.height, label: b.class || b.label, score: b.confidence }));
         }
       }
-      if (!detections.length) return;
+      if (!detections.length && !hasLineCrossings) return;
 
       const labelSet = fo.labels instanceof Set ? fo.labels : (Array.isArray(fo.labels) ? new Set(fo.labels) : null);
       const idSet = fo.ids instanceof Set ? fo.ids : (Array.isArray(fo.ids) ? new Set(fo.ids) : null);
@@ -104,10 +186,10 @@ const canvasUtils = {
         }
         return true;
       });
-      if (!filtered.length) return;
+      const hasFilteredDetections = filtered.length > 0;
 
       const personPaths = {};
-      if (showPaths) {
+      if (showPaths && hasFilteredDetections) {
         filtered.forEach((d, index) => {
           if (!(d.label && d.label.toLowerCase() === 'person')) return;
           let x, y, width, height;
@@ -123,7 +205,7 @@ const canvasUtils = {
         });
       }
 
-      if (showBoxes) {
+      if (showBoxes && hasFilteredDetections) {
         filtered.forEach((d, index) => {
           let x, y, width, height;
           if (d._legacyPixels) { x = d.x; y = d.y; width = d.width; height = d.height; }
@@ -158,7 +240,7 @@ const canvasUtils = {
         });
       }
 
-      if (showPaths) {
+      if (showPaths && hasFilteredDetections) {
         Object.entries(personPaths).forEach(([id, points]) => {
           if (points.length < 2) return;
           points.sort((a,b)=> (a.ts > b.ts ? 1 : a.ts < b.ts ? -1 : 0));
@@ -189,6 +271,10 @@ const canvasUtils = {
           }
           ctx.restore();
         });
+      }
+
+      if (hasLineCrossings) {
+        this.drawLineCrossings(ctx, fo.lineCrossings, baseWidth, baseHeight);
       }
     } catch (err) { console.error('drawBoundingBoxes error:', err); }
   },
