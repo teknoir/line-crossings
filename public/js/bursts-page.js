@@ -425,9 +425,11 @@ function showBurstSpotlight(burst, card) {
   const cameraLabel = burst.peripheral?.id || burst.peripheral?.name || 'Unknown camera';
   const detectionLabel = burst.detectionId || 'No detection id';
   const directionLabel = (burst.direction || 'unknown').toUpperCase();
+  const alertIdLabel = burst.alertId || 'No alert id';
   meta.innerHTML = `
     <span><strong>Camera:</strong> ${cameraLabel}</span>
     <span><strong>Detection:</strong> ${detectionLabel}</span>
+    <span><strong>Alert ID:</strong> ${alertIdLabel}</span>
     <span><strong>Direction:</strong> ${directionLabel}</span>
     <span><strong>Frames:</strong> ${burst.burstCount}</span>
     <span><strong>Timestamp:</strong> ${formatBurstTimestamp(burst.timestamp)}</span>
@@ -459,44 +461,37 @@ function showBurstSpotlight(burst, card) {
   viewer.appendChild(details);
 }
 
-function openBurstAlert(burst) {
-  if (!burst || !burst.detectionId) {
-    const statusEl = document.getElementById('burstPreviewStatus');
-    if (statusEl) statusEl.textContent = 'No detection ID available for this burst.';
+async function openBurstAlert(burst) {
+  const statusEl = document.getElementById('burstPreviewStatus');
+  const base = ((window.__BASE_URL__ || (document.querySelector('base')?.getAttribute('href') || '')) || '').replace(/\/+$/, '');
+  const openAlertInNewTab = (alertId) => {
+    const url = `${base}/?alert=${encodeURIComponent(alertId)}`;
+    window.open(url, '_blank', 'noopener');
+  };
+  if (burst && burst.alertId) {
+    openAlertInNewTab(burst.alertId);
+    if (statusEl) statusEl.textContent = `Opened alert ${burst.alertId} in new tab`;
     return;
   }
-  const base = (window.__BASE_URL__ || '').replace(/\/+$/, '');
-  const url = `${base}/?alert=${encodeURIComponent(burst.detectionId)}`.replace(/^\/\//, '/');
-  window.location.href = url;
-}
-
-function openBurstImageModal(imageUrl, burst) {
-  if (!imageUrl) return;
-  const modal = document.getElementById('imageModal');
-  const canvas = document.getElementById('imageCanvas');
-  const metadataDiv = document.getElementById('imageMetadata');
-  if (!modal || !canvas || !metadataDiv) return;
-
-  canvasUtils.loadImage(imageUrl)
-    .then((img) => {
-      const ctx = canvas.getContext('2d');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      const safeUrl = encodeURI(imageUrl);
-      metadataDiv.innerHTML = `
-        <div><strong>Image:</strong> <a href="${safeUrl}" target="_blank" rel="noopener">${safeUrl}</a></div>
-        <div><strong>Camera:</strong> ${burst?.peripheral?.id || burst?.peripheral?.name || 'Unknown'}</div>
-        <div><strong>Direction:</strong> ${(burst?.direction || 'unknown').toUpperCase()}</div>
-        <div><strong>Frames:</strong> ${burst?.burstCount ?? 'N/A'}</div>
-        <div><strong>Timestamp:</strong> ${formatBurstTimestamp(burst?.timestamp)}</div>
-      `;
-      modal.style.display = 'block';
-    })
-    .catch((error) => {
-      console.error('Failed to load burst image for viewer:', error);
-    });
+  if (!burst || !burst.detectionId) {
+    if (statusEl) statusEl.textContent = 'No alert or detection ID available for this burst.';
+    return;
+  }
+  const detectionId = burst.detectionId;
+  try {
+    const result = await api.getAlerts({ search: detectionId, limit: 1, page: 1 });
+    const match = result?.alerts?.[0];
+    if (match && (match.id || match._id)) {
+      const id = match.id || match._id;
+      openAlertInNewTab(id);
+      if (statusEl) statusEl.textContent = `Opened alert ${id} in new tab`;
+      return;
+    }
+    if (statusEl) statusEl.textContent = `No alert found for ${detectionId}`;
+  } catch (error) {
+    console.error('Failed to open alert for burst:', error);
+    if (statusEl) statusEl.textContent = `Failed to open alert: ${error.message}`;
+  }
 }
 
 function setupModalControls() {

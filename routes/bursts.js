@@ -126,6 +126,14 @@ router.get('/', async (req, res) => {
         doc.metadata?.annotations?.linedir ||
         null;
 
+      // New: resolve alertId from annotations for direct alert open
+      const alertIdValue =
+        doc.metadata?.annotations?.['teknoir.org/alertid'] ||
+        doc.metadata?.annotations?.['teknoir.org.alertid'] ||
+        resolveNested(doc.metadata?.annotations, ['teknoir', 'org', 'alertid']) ||
+        doc.metadata?.annotations?.alertid ||
+        null;
+
       const timestamp = doc.metadata?.timestamp || doc.data?.timestamp || null;
       let cutoutImage = null;
       if (doc.data?.filename) {
@@ -144,6 +152,7 @@ router.get('/', async (req, res) => {
       return {
         id: doc._id,
         detectionId: doc.data?.id || null,
+        alertId: alertIdValue,
         burstCount: merged.length,
         burstImages: previewImages,
         cutoutImage,

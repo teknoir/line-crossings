@@ -506,9 +506,11 @@ function showBurstSpotlight(burst, card) {
   const cameraLabel = burst.peripheral?.id || burst.peripheral?.name || 'Unknown camera';
   const detectionLabel = burst.detectionId || 'No detection id';
   const directionLabel = (burst.direction || 'unknown').toUpperCase();
+  const alertIdLabel = burst.alertId || 'No alert id';
   meta.innerHTML = `
     <span><strong>Camera:</strong> ${cameraLabel}</span>
     <span><strong>Detection:</strong> ${detectionLabel}</span>
+    <span><strong>Alert ID:</strong> ${alertIdLabel}</span>
     <span><strong>Direction:</strong> ${directionLabel}</span>
     <span><strong>Frames:</strong> ${burst.burstCount}</span>
     <span><strong>Timestamp:</strong> ${formatBurstTimestamp(burst.timestamp)}</span>
@@ -553,14 +555,20 @@ function showBurstSpotlight(burst, card) {
 }
 
 async function openBurstAlert(burst) {
+  const statusEl = document.getElementById('burstPreviewStatus');
+  // Prefer direct alertId from burst if present
+  if (burst && burst.alertId) {
+    await selectAlert(burst.alertId, null);
+    if (statusEl) statusEl.textContent = `Opened alert ${burst.alertId}`;
+    return;
+  }
+  // Fallback to detectionId-based search
   if (!burst || !burst.detectionId) {
-    const statusEl = document.getElementById('burstPreviewStatus');
-    if (statusEl) statusEl.textContent = 'No detection ID available for this burst.';
+    if (statusEl) statusEl.textContent = 'No alert or detection ID available for this burst.';
     return;
   }
 
   const detectionId = burst.detectionId;
-  const statusEl = document.getElementById('burstPreviewStatus');
 
   const alertItems = Array.from(document.querySelectorAll('.alert-item'));
   const existing = alertItems.find(item => {
