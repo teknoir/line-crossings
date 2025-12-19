@@ -305,13 +305,19 @@ async function loadBurstPreviews() {
     const response = await api.getBursts({ date, direction, camera, page, limit });
     const bursts = Array.isArray(response?.bursts) ? response.bursts : [];
     burstPaginationState.totalCount = Number.isFinite(response?.totalCount) ? response.totalCount : bursts.length;
-    renderBurstPreviewGrid(bursts);
+
+    // Client-side fallback: apply direction filter if not both
+    const filtered = (direction && direction !== 'both')
+      ? bursts.filter((b) => (String(b.direction || '').toLowerCase()) === String(direction).toLowerCase())
+      : bursts;
+
+    renderBurstPreviewGrid(filtered);
     renderBurstPagination();
 
     const directionLabel = direction === 'both' ? 'entry & exit' : direction;
     const cameraLabel = camera ? ` · Camera filter: ${camera}` : '';
     const totalPages = Math.max(Math.ceil(burstPaginationState.totalCount / burstPaginationState.limit), 1);
-    statusEl.textContent = `${bursts.length} burst${bursts.length === 1 ? '' : 's'} on page ${page}/${totalPages} for ${directionLabel} on ${date}${cameraLabel}`;
+    statusEl.textContent = `${filtered.length} burst${filtered.length === 1 ? '' : 's'} on page ${page}/${totalPages} for ${directionLabel} on ${date}${cameraLabel}`;
   } catch (error) {
     console.error('Failed to load bursts:', error);
     statusEl.textContent = 'Failed to load burst previews.';
@@ -583,3 +589,4 @@ async function initBurstsPage() {
 }
 
 document.addEventListener('DOMContentLoaded', initBurstsPage);
+

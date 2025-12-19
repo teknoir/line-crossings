@@ -76,15 +76,37 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // Apply direction filter at the DB level (case-insensitive) unless 'both'
+    // Apply direction filter robustly using $expr unless 'both'
     if (requestedDirection !== 'both') {
-      const dirRegex = new RegExp(`^${requestedDirection}$`, 'i');
+      const dirValue = requestedDirection; // exact value like 'entry' or 'exit'
       andFilters.push({
-        $or: [
-          { 'metadata.annotations.teknoir.org/linedir': dirRegex },
-          { 'metadata.annotations.teknoir.org.linedir': dirRegex },
-          { 'metadata.annotations.linedir': dirRegex }
-        ]
+        $expr: {
+          $or: [
+            // Nested path variants
+            { $eq: [ { $toLower: { $ifNull: [ '$metadata.annotations.teknoir.org.linedir', '' ] } }, dirValue ] },
+            { $eq: [ { $toLower: { $ifNull: [ '$metadata.annotations.linedir', '' ] } }, dirValue ] },
+            // Flattened keys inside annotations object (e.g., 'teknoir.org/linedir')
+            {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: { $objectToArray: { $ifNull: [ '$metadata.annotations', {} ] } },
+                      as: 'kv',
+                      cond: {
+                        $and: [
+                          { $in: [ '$$kv.k', [ 'teknoir.org/linedir', 'teknoir.org.linedir', 'linedir' ] ] },
+                          { $eq: [ { $toLower: { $ifNull: [ '$$kv.v', '' ] } }, dirValue ] }
+                        ]
+                      }
+                    }
+                  }
+                },
+                0
+              ]
+            }
+          ]
+        }
       });
     }
 
