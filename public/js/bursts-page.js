@@ -356,7 +356,8 @@ function renderBurstPreviewGrid(bursts) {
     strip.className = 'burst-thumb-strip';
     const images = Array.isArray(burst.burstImages) ? burst.burstImages : [];
     if (images.length === 0 && burst.cutoutImage) images.push(burst.cutoutImage);
-    images.forEach((src, index) => {
+    const displayImages = images.slice(0, 11); // cap to 11 thumbnails
+    displayImages.forEach((src, index) => {
       const img = document.createElement('img');
       img.src = src;
       img.alt = `burst-${index}`;
@@ -381,6 +382,60 @@ function renderBurstPreviewGrid(bursts) {
 
   if (firstSelection) {
     showBurstSpotlight(firstSelection.burst, firstSelection.card);
+  }
+
+  // One-time resize: adjust thumbnail sizes to fit within cards
+  sizeBurstThumbnails();
+  // Setup resize observer for dynamic sizing
+  setupThumbnailResizeObserver();
+}
+
+function sizeBurstThumbnails() {
+  const cards = document.querySelectorAll('.burst-card');
+  cards.forEach((card) => {
+    const strip = card.querySelector('.burst-thumb-strip');
+    if (!strip) return;
+
+    const images = strip.querySelectorAll('img');
+    const imageCount = images.length;
+
+    if (imageCount === 0) return;
+
+    // Calculate available width: consider card padding, strip padding, and desired gap
+    const cardStyle = getComputedStyle(card);
+    const stripStyle = getComputedStyle(strip);
+    const cardPadding = (parseFloat(cardStyle.paddingLeft) || 0) + (parseFloat(cardStyle.paddingRight) || 0);
+    const stripPadding = (parseFloat(stripStyle.paddingLeft) || 0) + (parseFloat(stripStyle.paddingRight) || 0);
+    const stripGap = parseFloat(stripStyle.gap) || 0;
+    const availableWidth = card.clientWidth - cardPadding - stripPadding - stripGap * (imageCount - 1);
+
+    // Calculate and apply width to each image: respect aspect ratio, max 11 images
+    const maxImages = Math.min(imageCount, 11);
+    const imageWidth = Math.max(1, Math.floor(availableWidth / maxImages));
+    images.forEach((img) => {
+      img.style.width = `${imageWidth}px`;
+      img.style.height = 'auto'; // Maintain aspect ratio
+      img.style.objectFit = 'contain';
+      img.style.maxWidth = '100%';
+    });
+  });
+}
+
+function setupThumbnailResizeObserver() {
+  const observer = new ResizeObserver(() => {
+    // On resize, re-calculate thumbnail sizes for all cards
+    sizeBurstThumbnails();
+  });
+
+  const cards = document.querySelectorAll('.burst-card');
+  cards.forEach((card) => {
+    observer.observe(card);
+  });
+
+  // Optional: also observe the grid/container if its size impacts the cards
+  const grid = document.getElementById('burstPreviewGrid');
+  if (grid) {
+    observer.observe(grid);
   }
 }
 

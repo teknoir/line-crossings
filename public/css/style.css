@@ -1038,9 +1038,10 @@ header { margin-bottom: var(--space-section); }
   display: flex;
   gap: 6px;
   padding: 6px 8px;
-  overflow-x: auto;
+  overflow-x: hidden; /* prevent horizontal scroll; images are sized to fit */
+  flex-wrap: nowrap;
 }
-.burst-thumb-strip img { height: 64px; border-radius: 0; }
+.burst-thumb-strip::-webkit-scrollbar { display: none; }
 
 /* Spotlight */
 .burst-spotlight-details { display: grid; gap: var(--space-md); }
