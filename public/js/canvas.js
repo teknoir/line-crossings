@@ -201,6 +201,18 @@ const canvasUtils = {
           const midBottomX = x + width / 2;
           const midBottomY = y + height;
           const idKey = d.id || `person_${index}`;
+          // Seed a stable, unique color for paths even if boxes are not drawn
+          if (!this._detectionColorMap[idKey]) {
+            if (d.id) {
+              // Use stroke-color logic tied to detection id (assigns if missing)
+              const c = this.getStrokeColorForId(d, index);
+              this._detectionColorMap[idKey] = c;
+            } else {
+              // No stable id: assign a new color from pool for this path key
+              const c = this._colorPool[this._colorPoolIndex++ % this._colorPool.length];
+              this._detectionColorMap[idKey] = c;
+            }
+          }
           (personPaths[idKey] ||= []).push({ x: midBottomX, y: midBottomY, ts: d.timestamp || index });
         });
       }

@@ -281,8 +281,8 @@ function createAlertElement(alert) {
     <div class="alert-item-content">
       <span class="status-badge ${statusClass}">${alert.status || 'new'}</span>
       <span class="alert-id-text">${alert.id || alert._id}</span>
-      <span class="alert-meta-item">📷 ${alert.peripheral_id || 'Unknown'}</span>
-      <span class="alert-meta-item">🕒 ${timestamp}</span>
+      <span class="alert-meta-item"> ${alert.peripheral_id || 'Unknown'}</span>
+      <span class="alert-meta-item"> ${timestamp}</span>
     </div>
   `;
   div.addEventListener('click', () => selectAlert(alert._id, div));
@@ -737,7 +737,7 @@ async function renderAlertModal(alert) {
         <div class="filter-group tight" id="fg-types">
           <label>Types</label>
           <div class="types-group">
-            <label><input type="checkbox" id="toggleBoxes" checked /> Boxes</label>
+            <label><input type="checkbox" id="toggleBoxes" /> Boxes</label>
             <label><input type="checkbox" id="togglePaths" checked /> Paths</label>
             <label><input type="checkbox" id="toggleLineCrossings" /> Line crossings</label>
           </div>
@@ -758,7 +758,7 @@ async function renderAlertModal(alert) {
     </div>
     <div class="alert-modal-media" id="alertMediaContainer">
       <div class="loading">Loading media...</div>
-      ${alert.videoUrl ? '<div class="media-hint">Click to play video</div>' : ''}
+      ${alert.videoUrl ? '<div class="media-hint">Click image to play video</div>' : ''}
     </div>
     <div class="burst-gallery">
       <h3 class="h-section">Burst Images</h3>
@@ -822,7 +822,8 @@ async function loadAlertImageInModal(alert) {
     const lineCrossingConfig = getLineCrossingConfigForAlert(alert);
     canvas.__lineCrossingConfig = lineCrossingConfig || null;
     canvas.dataset.cameraConfigName = lineCrossingConfig ? lineCrossingConfig.cameraName : '';
-    canvasUtils.drawBoundingBoxes(canvas, image, metadata, annotationsData);
+    // Initial draw should reflect default filters (Boxes off, Paths on)
+    canvasUtils.drawBoundingBoxes(canvas, image, metadata, annotationsData, { showBoxes: false, showPaths: true });
 
     container.innerHTML = '';
     container.appendChild(canvas);
@@ -831,7 +832,7 @@ async function loadAlertImageInModal(alert) {
     if (alert.videoUrl) {
       const hint = document.createElement('div');
       hint.className = 'media-hint';
-      hint.textContent = 'Click to play video';
+      hint.textContent = 'Click image to play video';
       container.appendChild(hint);
 
       // Add click handler to switch to video while keeping overlay
@@ -870,7 +871,7 @@ async function loadAlertImageInModal(alert) {
 
     container.innerHTML = `
       <div class="error" style="padding: 30px; text-align: center; background: #f9f9f9; border-radius: 8px;">
-        <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;">📷</div>
+        <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;"></div>
         <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #666;">${errorMessage}</div>
         <div style="font-size: 13px; color: #999; margin-bottom: 5px;">
           Path: <code style="background: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${alert.video_snapshot || 'N/A'}</code>
@@ -1072,8 +1073,14 @@ function switchToVideo(alert, container, canvas, metadata, annotationsData) {
     isScrubbing = false;
   });
 
-  // Redraw overlay only (no base image) with existing filters (defaults)
-  const overlayOptions = { overlayOnly: true, showBoxes: true, showPaths: true };
+  // Redraw overlay only (no base image) with existing filters
+  const boxesToggleEl = document.getElementById('toggleBoxes');
+  const pathsToggleEl = document.getElementById('togglePaths');
+  const overlayOptions = {
+    overlayOnly: true,
+    showBoxes: boxesToggleEl ? !!boxesToggleEl.checked : false,
+    showPaths: pathsToggleEl ? !!pathsToggleEl.checked : true
+  };
   const timelineSlider = document.getElementById('timelineSlider');
   if (timelineSlider) {
     const parsed = Number.parseInt(timelineSlider.value, 10);
@@ -1110,14 +1117,14 @@ function switchToVideo(alert, container, canvas, metadata, annotationsData) {
   // Hint re-added
   const hint = document.createElement('div');
   hint.className = 'media-hint';
-  hint.textContent = 'Click to play video';
+  hint.textContent = 'Video playing with overlay';
   wrapper.appendChild(hint);
 
   // Handle video load error
   video.addEventListener('error', () => {
     container.innerHTML = `
       <div class="error" style="padding: 30px; text-align: center;">
-        <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;">🎥</div>
+        <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;"></div>
         <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #666;">Video file not available</div>
         <div style="font-size: 13px; color: #999;">The video file could not be loaded.</div>
       </div>
@@ -1177,7 +1184,7 @@ function renderAnnotationsStats(annotationsData) {
 
   if (!annotationsData || !annotationsData.data) {
     statsDiv.innerHTML = `
-      <h3>📊 Annotations Data</h3>
+      <h3>Annotations Data</h3>
       <p style="color:#999; margin:0;">No annotations data available</p>
     `;
     return statsDiv;
@@ -1195,7 +1202,7 @@ function renderAnnotationsStats(annotationsData) {
     .map(([label,count]) => `<div class="label-chip"><span style="font-weight:bold;color:${getLabelColor(label)};">${label}</span><span style="color:#666;">${count}</span></div>`).join('') : '';
 
   statsDiv.innerHTML = `
-    <h3>📊 Annotations Statistics ${hasDetections ? '<span style="background:#4CAF50;color:#fff;padding:2px 8px;border-radius:12px;font-size:12px;">Detections Found</span>' : '<span style="background:#FF9800;color:#fff;padding:2px 8px;border-radius:12px;font-size:12px;">No Detections</span>'}</h3>
+    <h3>Annotations Statistics ${hasDetections ? '<span style="background:#4CAF50;color:#fff;padding:2px 8px;border-radius:12px;font-size:12px;">Detections Found</span>' : '<span style="background:#FF9800;color:#fff;padding:2px 8px;border-radius:12px;font-size:12px;">No Detections</span>'}</h3>
 
     <div class="stats-grid">
       <div class="stats-card">
@@ -1390,8 +1397,8 @@ async function renderAlertDetail(alert) {
       </div>
       ${alert.llm_classification.count_humans ? `
         <div style="margin-top: 10px; font-size: 14px; color: #666;">
-          👥 ${alert.llm_classification.count_humans} human(s) detected
-          ${alert.llm_classification.frames_processed ? ` | 🎬 ${alert.llm_classification.frames_processed} frames processed` : ''}
+          ${alert.llm_classification.count_humans} human(s) detected
+          ${alert.llm_classification.frames_processed ? ` | ${alert.llm_classification.frames_processed} frames processed` : ''}
         </div>
       ` : ''}
     </div>
@@ -1478,7 +1485,7 @@ async function loadAlertImage(alert) {
 
     container.innerHTML = `
       <div class="error" style="padding: 30px; text-align: center; background: #f9f9f9; border-radius: 8px;">
-        <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;">📷</div>
+        <div style="font-size: 64px; margin-bottom: 15px; opacity: 0.5;"></div>
         <div style="font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #666;">${errorMessage}</div>
         <div style="font-size: 13px; color: #999; margin-bottom: 5px;">
           Path: <code style="background: #fff; padding: 2px 6px; border-radius: 3px; font-size: 11px;">${alert.video_snapshot || 'N/A'}</code>
@@ -1794,7 +1801,7 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     e.preventDefault();
     labelsInput.value = '';
     idsInput.value = '';
-    boxesCheckbox.checked = true;
+    boxesCheckbox.checked = false;
     pathsCheckbox.checked = true;
     if (lineCrossingsCheckbox && !lineCrossingsCheckbox.disabled) {
       lineCrossingsCheckbox.checked = true;
@@ -1804,7 +1811,7 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
       timelineSlider.value = String(activeFrameIndex);
       updateTimelineDisplay();
     }
-    const options = { showBoxes: true, showPaths: true, overlayOnly: isVideoActive() };
+    const options = { showBoxes: false, showPaths: true, overlayOnly: isVideoActive() };
     if (typeof activeFrameIndex === 'number') options.maxFrameIndex = activeFrameIndex;
     if (hasLineCrossingConfig && lineCrossingsCheckbox && lineCrossingsCheckbox.checked) {
       options.lineCrossings = lineCrossingConfig;
@@ -1828,4 +1835,7 @@ function setupAnnotationFilterControls(canvas, image, metadata, annotationsData)
     timelineSlider.addEventListener('input', (event) => onScrubChange(event.target.value));
     timelineSlider.addEventListener('change', (event) => onScrubChange(event.target.value));
   }
+
+  // Apply initial filter state so defaults (Boxes unchecked) are reflected immediately
+  try { redraw(); } catch (err) { console.warn('Initial redraw failed:', err); }
 }
