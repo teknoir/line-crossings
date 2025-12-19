@@ -83,8 +83,24 @@ router.get('/', async (req, res) => {
       .toArray();
 
     const bursts = docs.map((doc) => {
-      const burst = Array.isArray(doc.data?.burst) ? doc.data.burst : [];
-      const burstImagesFull = burst.map((p) => `${mediaBaseUrl}/jpeg/${normalizeMediaPath(p)}`);
+      const filesArr = Array.isArray(doc.data?.files) ? doc.data.files : [];
+      const legacyBurst = Array.isArray(doc.data?.burst) ? doc.data.burst : [];
+
+      const normalize = (p) => (p || '').replace(/^\/+/, '');
+      const seen = new Set();
+      const merged = [];
+      const pushIf = (p) => {
+        if (!p) return;
+        const key = normalize(p);
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push(key);
+      };
+      filesArr.forEach(pushIf);
+      legacyBurst.forEach(pushIf);
+
+      const burstImagesFull = merged.map((p) => `${mediaBaseUrl}/jpeg/${normalize(p)}`);
+
       const directionValue =
         doc.metadata?.annotations?.['teknoir.org/linedir'] ||
         doc.metadata?.annotations?.['teknoir.org.linedir'] ||
@@ -93,7 +109,13 @@ router.get('/', async (req, res) => {
         null;
 
       const timestamp = doc.metadata?.timestamp || doc.data?.timestamp || null;
-      const cutoutImage = doc.data?.filename ? `${mediaBaseUrl}/jpeg/${normalizeMediaPath(doc.data.filename)}` : null;
+      let cutoutImage = null;
+      if (doc.data?.filename) {
+        cutoutImage = `${mediaBaseUrl}/jpeg/${normalize(doc.data.filename)}`;
+      } else if (merged.length > 0) {
+        cutoutImage = `${mediaBaseUrl}/jpeg/${normalize(merged[0])}`;
+      }
+
       const previewImages = burstImagesFull.slice(0, 12);
       if (cutoutImage) {
         const existingIndex = previewImages.indexOf(cutoutImage);
@@ -104,7 +126,7 @@ router.get('/', async (req, res) => {
       return {
         id: doc._id,
         detectionId: doc.data?.id || null,
-        burstCount: burst.length,
+        burstCount: merged.length,
         burstImages: previewImages,
         cutoutImage,
         peripheral: {

@@ -36,6 +36,83 @@ baseRouter.use((req, res, next) => {
   next();
 });
 
+// Provide a dedicated Burst Preview page at BASE_URL + '/bursts'
+baseRouter.get('/bursts', (req, res) => {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Burst Preview</title>
+  <base href="${BASE_URL || ''}/" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- No inline BASE_URL script; api.js will use <base> fallback -->
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 class="h-section main-title">Burst Preview</h1>
+      <div class="header-controls">
+        <a href="./" style="margin-right:12px; text-decoration:none; color:#9cc3ff;">Alerts</a>
+        <span id="status">Loading...</span>
+      </div>
+    </header>
+
+    <div class="burst-preview-section" id="burstPreviewSection">
+      <div class="burst-preview-header">
+        <h2 class="h-section">Burst Preview</h2>
+        <div class="burst-preview-controls">
+          <form class="burst-preview-controls" autocomplete="off" onsubmit="return false;">
+            <label class="bp-control">
+              <span>Date</span>
+              <input type="date" id="burstDate" name="lc-burst-date" autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" aria-autocomplete="none" inputmode="none" />
+            </label>
+            <div class="bp-control">
+              <span>Direction</span>
+              <div class="bp-radio-group">
+                <label><input type="radio" name="burstDirection" value="entry" /> Entry</label>
+                <label><input type="radio" name="burstDirection" value="exit" /> Exit</label>
+                <label><input type="radio" name="burstDirection" value="both" checked /> Both</label>
+              </div>
+            </div>
+            <label class="bp-control">
+              <span>Camera (optional)</span>
+              <input type="text" id="burstCamera" name="lc-burst-camera" placeholder="e.g. nc0009-salefloor-270" autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" aria-autocomplete="none" />
+            </label>
+            <button id="burstLoadBtn" type="button">Load Bursts</button>
+          </form>
+        </div>
+      </div>
+      <div class="burst-preview-status" id="burstPreviewStatus"></div>
+      <div class="burst-preview-viewer" id="burstPreviewViewer">
+        <p class="placeholder">Select a burst to preview.</p>
+      </div>
+      <div class="burst-preview-grid" id="burstPreviewGrid">
+        <p class="placeholder">Select filters above and click “Load Bursts” to preview cutouts.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for full image view (reused) -->
+  <div id="imageModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <div id="imageContainer">
+        <canvas id="imageCanvas"></canvas>
+      </div>
+      <div id="imageMetadata"></div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/canvas.js"></script>
+  <script src="js/bursts-page.js"></script>
+</body>
+</html>`;
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
+});
+
 // API Routes under BASE_URL (/BASE_URL/api/...)
 baseRouter.use('/api/alerts', alertsRouter);
 baseRouter.use('/api/bursts', burstsRouter);

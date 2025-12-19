@@ -131,9 +131,35 @@ async function findLineCrossingDoc(db, parsed, alert, attempts) {
 function buildBurstUrls(doc, mediaBaseUrl) {
   if (!doc || !doc.data) return { burstImages: [], cutoutImage: null };
   const normalize = p => (p || '').replace(/^\/+/, '');
-  const burst = Array.isArray(doc.data.burst) ? doc.data.burst : [];
-  const burstImages = burst.map(p => `${mediaBaseUrl}/jpeg/${normalize(p)}`);
-  const cutoutImage = doc.data.filename ? `${mediaBaseUrl}/jpeg/${normalize(doc.data.filename)}` : null;
+
+  // New schema: data.files (array of relative file paths)
+  const filesArr = Array.isArray(doc.data.files) ? doc.data.files : [];
+  // Legacy schema: data.burst (array of relative file paths)
+  const legacyBurstArr = Array.isArray(doc.data.burst) ? doc.data.burst : [];
+
+  // Merge, preserve order (prefer files first if present), and de-duplicate
+  const merged = [];
+  const seen = new Set();
+  const pushIfNew = (p) => {
+    if (!p) return;
+    const key = normalize(p);
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(key);
+  };
+  filesArr.forEach(pushIfNew);
+  legacyBurstArr.forEach(pushIfNew);
+
+  const burstImages = merged.map(p => `${mediaBaseUrl}/jpeg/${normalize(p)}`);
+
+  // Determine cutout image: prefer explicit filename, else first of files, else null
+  let cutoutImage = null;
+  if (doc.data.filename) {
+    cutoutImage = `${mediaBaseUrl}/jpeg/${normalize(doc.data.filename)}`;
+  } else if (merged.length > 0) {
+    cutoutImage = `${mediaBaseUrl}/jpeg/${normalize(merged[0])}`;
+  }
+
   return { burstImages, cutoutImage };
 }
 

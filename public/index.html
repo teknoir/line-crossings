@@ -31,6 +31,7 @@
         <header>
             <h1 class="h-section main-title">Line Crossing Alerts</h1>
             <div class="header-controls">
+                <a href="bursts" style="margin-right:12px; text-decoration:none; color:#9cc3ff;">Burst Preview</a>
                 <span id="status">Loading...</span>
             </div>
         </header>
@@ -39,9 +40,9 @@
             <input type="text" id="searchInput" placeholder="Search by Alert ID (e.g., nc0009-salefloor-270-155f0f2e-935-lc-exit-0)">
             <div class="date-filters">
                 <label for="startDate">From:</label>
-                <input type="datetime-local" id="startDate">
+                <input type="datetime-local" id="startDate" autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" aria-autocomplete="none">
                 <label for="endDate">To:</label>
-                <input type="datetime-local" id="endDate">
+                <input type="datetime-local" id="endDate" autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" aria-autocomplete="none">
             </div>
             <button id="searchBtn">Search</button>
             <button id="clearBtn">Clear</button>
@@ -56,37 +57,6 @@
                 <div class="pagination" id="pagination">
                     <!-- Pagination controls will be loaded here -->
                 </div>
-            </div>
-        </div>
-        <div class="burst-preview-section" id="burstPreviewSection">
-            <div class="burst-preview-header">
-                <h2 class="h-section">Burst Preview</h2>
-                <div class="burst-preview-controls">
-                    <label class="bp-control">
-                        <span>Date</span>
-                        <input type="date" id="burstDate">
-                    </label>
-                    <div class="bp-control">
-                        <span>Direction</span>
-                        <div class="bp-radio-group">
-                            <label><input type="radio" name="burstDirection" value="entry"> Entry</label>
-                            <label><input type="radio" name="burstDirection" value="exit"> Exit</label>
-                            <label><input type="radio" name="burstDirection" value="both" checked> Both</label>
-                        </div>
-                    </div>
-                    <label class="bp-control">
-                        <span>Camera (optional)</span>
-                        <input type="text" id="burstCamera" placeholder="e.g. nc0009-salefloor-270">
-                    </label>
-                    <button id="burstLoadBtn">Load Bursts</button>
-                </div>
-            </div>
-            <div class="burst-preview-status" id="burstPreviewStatus"></div>
-            <div class="burst-preview-viewer" id="burstPreviewViewer">
-                <p class="placeholder">Select a burst to preview.</p>
-            </div>
-            <div class="burst-preview-grid" id="burstPreviewGrid">
-                <p class="placeholder">Select filters above and click “Load Bursts” to preview cutouts.</p>
             </div>
         </div>
     </div>

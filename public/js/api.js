@@ -1,7 +1,13 @@
 // API client for backend communication
 
 // Determine BASE_URL injected by server (index.html can set window.__BASE_URL__ via inline script)
-const BASE_URL = (window.__BASE_URL__ || '').replace(/\/+$/, ''); // remove trailing slash
+const __baseFromTag = (() => {
+  try {
+    const baseEl = document.querySelector('base');
+    return baseEl ? baseEl.getAttribute('href') || '' : '';
+  } catch (_) { return ''; }
+})();
+const BASE_URL = ((window.__BASE_URL__ || __baseFromTag) || '').replace(/\/+$/, ''); // remove trailing slash
 // API base always under /api relative to BASE_URL
 const API_BASE = `${BASE_URL}/api`.replace(/^\/\//, '/'); // avoid double leading slash
 

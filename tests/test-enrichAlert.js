@@ -139,6 +139,26 @@ async function testPrimaryIdLookupNonStrict() {
   assert.strictEqual(enriched.enrichment.lineDirection, 'EXIT');
 }
 
+async function testEnrichWithFilesArray() {
+  const alert = { id: 'abc-lc-entry-0' };
+  const doc = {
+    data: {
+      id: 'abc',
+      files: ['media/new/a.jpg', '/media/new/b.jpg', 'media/new/a.jpg'], // includes dup and leading slash
+      // no filename, should fallback to first file
+      coords: [],
+      skeleton: [],
+      classifiers: []
+    },
+    metadata: { annotations: { 'teknoir.org/linedir': 'entry', 'teknoir.org/lineid': 'lc-entry-0-segments' } }
+  };
+  const enriched = await enrichAlert(alert, makeMockDb({ doc }), { enrich: true });
+  assert(enriched.enrichment, 'Enrichment exists');
+  assert.strictEqual(enriched.enrichment.burstImages.length, 2, 'Deduplicates and normalizes file paths');
+  assert(enriched.enrichment.burstImages[0].endsWith('media/new/a.jpg'), 'First burst image should be first file path');
+  assert(enriched.enrichment.cutoutImage.endsWith('media/new/a.jpg'), 'Cutout should fallback to first file when filename missing');
+}
+
 (async () => {
   try {
     testParseAlertId();
@@ -148,6 +168,7 @@ async function testPrimaryIdLookupNonStrict() {
     await testEnrichWithDocRegexFallback();
     await testEnrichLineIdPeripheralFallback();
     await testPrimaryIdLookupNonStrict();
+    await testEnrichWithFilesArray();
     console.log('All enrichAlert tests passed');
   } catch (e) {
     console.error('Test failure:', e);
