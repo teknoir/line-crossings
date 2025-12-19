@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { connectToDatabase } = require('./utils/db');
+const { connectToReIDDatabase } = require('./utils/reiddb');
 const alertsRouter = require('./routes/alerts');
 const burstsRouter = require('./routes/bursts');
 
@@ -60,6 +61,9 @@ async function startServer() {
   try {
     await connectToDatabase();
     console.log('Connected to MongoDB');
+
+    await connectToReIDDatabase();
+    console.log('Connected to Re-ID MongoDB');
 
     app.listen(PORT, HOST, () => {
       console.log(`Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}${BASE_URL}`);

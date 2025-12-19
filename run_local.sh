@@ -110,6 +110,10 @@ if ! check_service_running "mongodb" 27017; then
     forward_and_catch "mongodb" 27017 27017 "$NAMESPACE" &
 fi
 
+if ! check_service_running "re-id-mongo" 26017; then
+    forward_and_catch "re-id-mongo" 26017 27017 "$NAMESPACE" &
+fi
+
 if ! check_service_running "sdmc-media-service" 8882; then
     forward_and_catch "sdmc-media-service" 8882 80 "$NAMESPACE" &
 fi
@@ -144,6 +148,9 @@ trap cleanup EXIT
 
 # Start the app after port forwarding
 echo "Starting dev server..."
+export REID_MONGODB_PASSWORD=$(kubectl --context=$CONTEXT --namespace=$NAMESPACE get secret re-id-mongo -o yaml | yq .data.password | base64 -d)
+export REID_MONGODB_USER=$(kubectl --context=$CONTEXT --namespace=$NAMESPACE get secret re-id-mongo -o yaml | yq .data.username | base64 -d)
+export REID_MONGODB_URI="mongodb://${REID_MONGODB_USER}:${REID_MONGODB_PASSWORD}@localhost:26017/historian?authSource=admin&readPreference=primary&appname=LC&ssl=false"
 export MONGODB_PASSWORD=$(kubectl --context=$CONTEXT --namespace=$NAMESPACE get secret mongodb-credentials -o yaml | yq .data.password | base64 -d)
 export MONGODB_USER=$(kubectl --context=$CONTEXT --namespace=$NAMESPACE get secret mongodb-credentials -o yaml | yq .data.username | base64 -d)
 export MONGODB_URI="mongodb://${MONGODB_USER}:${MONGODB_PASSWORD}@localhost:27017/historian?authSource=admin&readPreference=primary&appname=LC&ssl=false"
