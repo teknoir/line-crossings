@@ -566,43 +566,46 @@ header h1 {
 /* === Media Hint Normalization Override === */
 .alert-modal-media .media-hint {
   position: absolute !important;
-  top: 8px !important;
+  top: 50% !important;
   left: 50% !important;
-  transform: translateX(-50%) !important;
+  transform: translate(-50%, -50%) !important;
   background: var(--tek-outrun-orange) !important;
   color: var(--tek-off-white) !important;
-  padding: 4px 12px !important;
-  font-size: 12px !important;
-  font-weight: 600 !important;
-  letter-spacing: .4px !important;
+  padding: 8px 14px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: .3px !important;
   line-height: 1 !important;
   display: inline-block !important;
   width: auto !important;
   max-width: none !important;
   white-space: nowrap !important;
-  border: none !important;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.45) !important;
-  opacity: 0;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.45) !important;
+  opacity: 0.92;
   pointer-events: none;
-  transition: opacity .25s ease;
+  transition: opacity .2s ease, transform .2s ease;
 }
-/* Show on hover */
-.alert-modal-media:hover .media-hint { opacity: 1 !important; }
+/* Emphasize on hover of the media container */
+.alert-modal-media:hover .media-hint { opacity: 1 !important; transform: translate(-50%, -50%) scale(1.02) !important; }
 /* Remove any legacy bottom placement or transforms */
 .media-hint { bottom: auto !important; right: auto !important; }
 
+/* Base placement for media hint if used elsewhere */
 .media-hint {
     position: absolute;
-    bottom: 12px;
+    /* Center by default; specific containers can override */
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     background: rgba(0,0,0,0.65);
     color: var(--color-text);
     padding: 6px 14px;
     border-radius: 4px;
     font-size: 12px;
     pointer-events: none;
-    opacity: 0;
+    opacity: 0.85;
     transition: opacity 0.3s;
 }
 
@@ -1380,3 +1383,14 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 @media (max-width: 640px) {
   .alert-modal-content .line-details-panel .line-details-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Override child sizing for media hint so it does NOT fill the container */
+.alert-modal-media > .media-hint {
+  width: auto !important;
+  height: auto !important;
+  z-index: 3 !important;
+}
+/* Hide hint by default; show on hover */
+.alert-modal-media .media-hint { opacity: 0 !important; pointer-events: none !important; }
+.alert-modal-media:hover .media-hint { opacity: 1 !important; }
+

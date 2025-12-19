@@ -758,7 +758,7 @@ async function renderAlertModal(alert) {
     </div>
     <div class="alert-modal-media" id="alertMediaContainer">
       <div class="loading">Loading media...</div>
-      ${alert.videoUrl ? '<div class="media-hint">Click image to play video</div>' : ''}
+      ${alert.videoUrl ? '<div class="media-hint">Click to play video</div>' : ''}
     </div>
     <div class="burst-gallery">
       <h3 class="h-section">Burst Images</h3>
@@ -831,7 +831,7 @@ async function loadAlertImageInModal(alert) {
     if (alert.videoUrl) {
       const hint = document.createElement('div');
       hint.className = 'media-hint';
-      hint.textContent = 'Click image to play video';
+      hint.textContent = 'Click to play video';
       container.appendChild(hint);
 
       // Add click handler to switch to video while keeping overlay
@@ -1110,7 +1110,7 @@ function switchToVideo(alert, container, canvas, metadata, annotationsData) {
   // Hint re-added
   const hint = document.createElement('div');
   hint.className = 'media-hint';
-  hint.textContent = 'Video playing with overlay';
+  hint.textContent = 'Click to play video';
   wrapper.appendChild(hint);
 
   // Handle video load error
