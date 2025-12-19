@@ -62,7 +62,8 @@ baseRouter.get('/bursts', (req, res) => {
       <div class="burst-preview-header">
         <h2 class="h-section">Burst Preview</h2>
         <div class="burst-preview-controls">
-          <form class="burst-preview-controls" autocomplete="off" onsubmit="return false;">
+          <div class="bp-pagination" id="burstPagination"></div>
+          <form class="burst-preview-form" autocomplete="off" onsubmit="return false;">
             <label class="bp-control">
               <span>Date</span>
               <input type="date" id="burstDate" name="lc-burst-date" autocomplete="off" data-1p-ignore="true" data-lpignore="true" data-bwignore="true" aria-autocomplete="none" inputmode="none" />

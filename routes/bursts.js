@@ -34,6 +34,8 @@ router.get('/', async (req, res) => {
     const db = getReIDDatabase();
     const collection = getLineCrossingsCollection(db);
     const limit = Math.min(parseInt(req.query.limit, 10) || 60, 120);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const skip = (page - 1) * limit;
     const mediaBaseUrl = process.env.MEDIA_SERVICE_BASE_URL || 'https://teknoir.cloud/victra-poc/media-service/api';
     const andFilters = [];
 
@@ -74,11 +76,27 @@ router.get('/', async (req, res) => {
       });
     }
 
+    // Apply direction filter at the DB level (case-insensitive) unless 'both'
+    if (requestedDirection !== 'both') {
+      const dirRegex = new RegExp(`^${requestedDirection}$`, 'i');
+      andFilters.push({
+        $or: [
+          { 'metadata.annotations.teknoir.org/linedir': dirRegex },
+          { 'metadata.annotations.teknoir.org.linedir': dirRegex },
+          { 'metadata.annotations.linedir': dirRegex }
+        ]
+      });
+    }
+
     const filter = andFilters.length ? { $and: andFilters } : {};
+
+    // Count total matching docs before pagination
+    const totalMatching = await collection.countDocuments(filter);
 
     const docs = await collection
       .find(filter)
       .sort({ 'metadata.timestamp': -1 })
+      .skip(skip)
       .limit(limit)
       .toArray();
 
@@ -138,14 +156,13 @@ router.get('/', async (req, res) => {
       };
     });
 
-    const filteredBursts = requestedDirection === 'both'
-      ? bursts
-      : bursts.filter((b) => typeof b.direction === 'string' && b.direction.toLowerCase() === requestedDirection);
+    // Direction is already handled at DB level; no client-side filter
+    const filteredBursts = bursts;
 
     if (process.env.NODE_ENV !== 'production') {
       console.log('[Bursts] Query', JSON.stringify(filter));
       console.log('[Bursts] Direction filter', requestedDirection);
-      console.log('[Bursts] Matched docs', docs.length);
+      console.log('[Bursts] Matched docs (page slice)', docs.length);
       console.log('[Bursts] After direction filter', filteredBursts.length);
       if (filteredBursts[0]) {
         console.log('[Bursts] Sample burst direction', filteredBursts[0].direction);
@@ -153,7 +170,9 @@ router.get('/', async (req, res) => {
     }
 
     res.json({
-      total: filteredBursts.length,
+      totalCount: totalMatching,
+      page,
+      limit,
       bursts: filteredBursts
     });
   } catch (error) {

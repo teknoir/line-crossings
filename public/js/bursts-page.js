@@ -56,6 +56,7 @@
 let burstPreviewState = { date: '', direction: 'both', camera: '' };
 let burstSpotlightSelectedCard = null;
 let burstSpotlightCurrentImage = null;
+let burstPaginationState = { page: 1, limit: 60, totalCount: 0 };
 
 function formatBurstTimestamp(value) {
   if (!value) return 'N/A';
@@ -109,11 +110,121 @@ function setupBurstPreviewControls() {
 
   loadBtn.addEventListener('click', async (event) => {
     event.preventDefault();
+    burstPaginationState.page = 1; // reset to first page on new load
     await loadBurstPreviews();
   });
 
   // Initial load
+  burstPaginationState.page = 1;
   loadBurstPreviews();
+}
+
+function renderBurstPagination() {
+  const container = document.getElementById('burstPagination');
+  if (!container) return;
+  const { page, limit, totalCount } = burstPaginationState;
+  const totalPages = Math.max(Math.ceil(totalCount / limit), 1);
+
+  container.innerHTML = '';
+
+  const info = document.createElement('div');
+  info.className = 'pagination-info';
+  const startIdx = totalCount === 0 ? 0 : (page - 1) * limit + 1;
+  const endIdx = Math.min(page * limit, totalCount);
+  info.textContent = `Showing ${startIdx}-${endIdx} of ${totalCount}`;
+  container.appendChild(info);
+
+  const controls = document.createElement('div');
+  controls.className = 'pagination-controls';
+
+  const firstBtn = document.createElement('button');
+  firstBtn.textContent = 'First';
+  firstBtn.disabled = page <= 1;
+  firstBtn.addEventListener('click', async () => {
+    if (burstPaginationState.page !== 1) {
+      burstPaginationState.page = 1;
+      await loadBurstPreviews();
+    }
+  });
+
+  const prevBtn = document.createElement('button');
+  prevBtn.textContent = 'Prev';
+  prevBtn.disabled = page <= 1;
+  prevBtn.addEventListener('click', async () => {
+    if (burstPaginationState.page > 1) {
+      burstPaginationState.page -= 1;
+      await loadBurstPreviews();
+    }
+  });
+
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = 'Next';
+  nextBtn.disabled = page >= totalPages;
+  nextBtn.addEventListener('click', async () => {
+    const totalPagesLocal = Math.max(Math.ceil(burstPaginationState.totalCount / burstPaginationState.limit), 1);
+    if (burstPaginationState.page < totalPagesLocal) {
+      burstPaginationState.page += 1;
+      await loadBurstPreviews();
+    }
+  });
+
+  const lastBtn = document.createElement('button');
+  lastBtn.textContent = 'Last';
+  lastBtn.disabled = page >= totalPages;
+  lastBtn.addEventListener('click', async () => {
+    const totalPagesLocal = Math.max(Math.ceil(burstPaginationState.totalCount / burstPaginationState.limit), 1);
+    if (burstPaginationState.page !== totalPagesLocal) {
+      burstPaginationState.page = totalPagesLocal;
+      await loadBurstPreviews();
+    }
+  });
+
+  const pageIndicator = document.createElement('span');
+  pageIndicator.className = 'pagination-page';
+  pageIndicator.textContent = `Page ${page} of ${totalPages}`;
+
+  const pageJump = document.createElement('input');
+  pageJump.type = 'number';
+  pageJump.min = 1;
+  pageJump.max = totalPages;
+  pageJump.value = page;
+  pageJump.className = 'pagination-jump';
+  pageJump.title = 'Jump to page';
+  pageJump.addEventListener('change', async () => {
+    const desired = parseInt(pageJump.value, 10) || 1;
+    const bounded = Math.min(Math.max(desired, 1), Math.max(Math.ceil(burstPaginationState.totalCount / burstPaginationState.limit), 1));
+    if (bounded !== burstPaginationState.page) {
+      burstPaginationState.page = bounded;
+      await loadBurstPreviews();
+    }
+  });
+
+  const pageSize = document.createElement('select');
+  pageSize.className = 'pagination-size';
+  [30, 60, 120].forEach((sz) => {
+    const opt = document.createElement('option');
+    opt.value = String(sz);
+    opt.textContent = `${sz}/page`;
+    if (sz === limit) opt.selected = true;
+    pageSize.appendChild(opt);
+  });
+  pageSize.addEventListener('change', async () => {
+    const newLimit = parseInt(pageSize.value, 10) || 60;
+    if (newLimit !== burstPaginationState.limit) {
+      burstPaginationState.limit = newLimit;
+      burstPaginationState.page = 1; // reset to first page when page size changes
+      await loadBurstPreviews();
+    }
+  });
+
+  controls.appendChild(firstBtn);
+  controls.appendChild(prevBtn);
+  controls.appendChild(pageIndicator);
+  controls.appendChild(nextBtn);
+  controls.appendChild(lastBtn);
+  controls.appendChild(pageJump);
+  controls.appendChild(pageSize);
+  container.appendChild(controls);
 }
 
 async function loadBurstPreviews() {
@@ -124,10 +235,12 @@ async function loadBurstPreviews() {
   const date = burstPreviewState.date;
   const direction = burstPreviewState.direction || 'entry';
   const camera = (burstPreviewState.camera || '').trim();
+  const { page, limit } = burstPaginationState;
 
   if (!date) {
     statusEl.textContent = 'Select a date to load burst previews.';
     grid.innerHTML = '<p class="placeholder">No date selected.</p>';
+    renderBurstPagination();
     return;
   }
 
@@ -135,17 +248,21 @@ async function loadBurstPreviews() {
   grid.innerHTML = '<div class="loading">Loading bursts...</div>';
 
   try {
-    const response = await api.getBursts({ date, direction, camera });
+    const response = await api.getBursts({ date, direction, camera, page, limit });
     const bursts = Array.isArray(response?.bursts) ? response.bursts : [];
+    burstPaginationState.totalCount = Number.isFinite(response?.totalCount) ? response.totalCount : bursts.length;
     renderBurstPreviewGrid(bursts);
+    renderBurstPagination();
 
     const directionLabel = direction === 'both' ? 'entry & exit' : direction;
     const cameraLabel = camera ? ` · Camera filter: ${camera}` : '';
-    statusEl.textContent = `${bursts.length} burst${bursts.length === 1 ? '' : 's'} for ${directionLabel} on ${date}${cameraLabel}`;
+    const totalPages = Math.max(Math.ceil(burstPaginationState.totalCount / burstPaginationState.limit), 1);
+    statusEl.textContent = `${bursts.length} burst${bursts.length === 1 ? '' : 's'} on page ${page}/${totalPages} for ${directionLabel} on ${date}${cameraLabel}`;
   } catch (error) {
     console.error('Failed to load bursts:', error);
     statusEl.textContent = 'Failed to load burst previews.';
     grid.innerHTML = `<div class="error">Unable to load bursts: ${error.message}</div>`;
+    renderBurstPagination();
   }
 }
 

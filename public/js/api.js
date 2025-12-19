@@ -70,6 +70,7 @@ const api = {
     if (filters.direction && filters.direction !== 'both') params.append('direction', filters.direction);
     if (filters.camera) params.append('camera', filters.camera);
     if (filters.limit) params.append('limit', filters.limit);
+    if (filters.page) params.append('page', filters.page);
     const qs = params.toString();
     try {
       const response = await fetch(`${API_BASE}/bursts${qs ? `?${qs}` : ''}`);
