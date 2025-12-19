@@ -1343,3 +1343,40 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 /* (kept for reference, overridden by the above dark theme) */
 /* .date-filters input[type="datetime-local"] { background: white; border: 1px solid #ddd; } */
 
+/* --- Line details panel: 5x2 grid layout --- */
+.alert-modal-content .line-details-panel {
+  margin-bottom: var(--space-section);
+}
+.alert-modal-content .line-details-panel .line-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+.alert-modal-content .line-details-panel .line-details-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-flow: row;
+  gap: var(--space-md);
+  align-items: stretch;
+}
+/* Ensure cards fill their grid cell */
+.alert-modal-content .line-details-panel .ld-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+.alert-modal-content .line-details-panel .ld-card .value { margin-top: 4px; }
+
+/* Responsive fallbacks for narrower viewports */
+@media (max-width: 1200px) {
+  .alert-modal-content .line-details-panel .line-details-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .alert-modal-content .line-details-panel .line-details-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .alert-modal-content .line-details-panel .line-details-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
