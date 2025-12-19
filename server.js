@@ -85,11 +85,18 @@ baseRouter.get('/bursts', (req, res) => {
         </div>
       </div>
       <div class="burst-preview-status" id="burstPreviewStatus"></div>
-      <div class="burst-preview-viewer" id="burstPreviewViewer">
-        <p class="placeholder">Select a burst to preview.</p>
-      </div>
-      <div class="burst-preview-grid" id="burstPreviewGrid">
-        <p class="placeholder">Select filters above and click “Load Bursts” to preview cutouts.</p>
+
+      <div class="burst-preview-layout">
+        <div class="burst-left">
+          <div class="burst-preview-grid" id="burstPreviewGrid">
+            <p class="placeholder">Select filters above and click “Load Bursts” to preview cutouts.</p>
+          </div>
+        </div>
+        <div class="burst-right">
+          <div class="burst-preview-viewer" id="burstPreviewViewer">
+            <p class="placeholder">Select a burst to preview.</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>

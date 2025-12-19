@@ -58,6 +58,57 @@ let burstSpotlightSelectedCard = null;
 let burstSpotlightCurrentImage = null;
 let burstPaginationState = { page: 1, limit: 60, totalCount: 0 };
 
+// Keyboard navigation: ArrowUp/ArrowDown to move between cards
+function setupBurstKeyboardNavigation() {
+  const grid = document.getElementById('burstPreviewGrid');
+  if (!grid) return;
+
+  // Ensure the document captures key events; avoid interfering with inputs
+  document.addEventListener('keydown', (evt) => {
+    const key = evt.key;
+    if (key !== 'ArrowDown' && key !== 'ArrowUp') return;
+
+    // Ignore when typing in inputs/selects/textareas
+    const t = evt.target;
+    const tag = (t && t.tagName) ? t.tagName.toLowerCase() : '';
+    if (tag === 'input' || tag === 'textarea' || tag === 'select' || (t && t.isContentEditable)) return;
+
+    const cards = Array.prototype.slice.call(grid.querySelectorAll('.burst-card'));
+    if (!cards.length) return;
+
+    evt.preventDefault();
+
+    // Determine current index
+    let currentIdx = -1;
+    if (burstSpotlightSelectedCard) {
+      currentIdx = cards.indexOf(burstSpotlightSelectedCard);
+    }
+    if (currentIdx === -1) currentIdx = 0;
+
+    // Compute next/prev index
+    let nextIdx = currentIdx;
+    if (key === 'ArrowDown') nextIdx = Math.min(currentIdx + 1, cards.length - 1);
+    if (key === 'ArrowUp') nextIdx = Math.max(currentIdx - 1, 0);
+
+    const nextCard = cards[nextIdx];
+    if (!nextCard) return;
+
+    // Simulate selection: find burst data in a lightweight way
+    // We don't store burst objects on elements; trigger click handler to reuse existing logic
+    nextCard.click();
+
+    // Ensure visibility in left scroll panel
+    try {
+      const leftPane = document.querySelector('.burst-left') || grid;
+      nextCard.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      // If using a custom container, adjust scroll to keep a bit of padding
+      if (leftPane && leftPane.contains(nextCard)) {
+        // No-op; scrollIntoView with nearest should keep it in view
+      }
+    } catch(_) {}
+  });
+}
+
 function formatBurstTimestamp(value) {
   if (!value) return 'N/A';
   const parsed = new Date(value);
@@ -117,6 +168,9 @@ function setupBurstPreviewControls() {
   // Initial load
   burstPaginationState.page = 1;
   loadBurstPreviews();
+
+  // Setup keyboard navigation
+  setupBurstKeyboardNavigation();
 }
 
 function renderBurstPagination() {
@@ -362,15 +416,7 @@ function showBurstSpotlight(burst, card) {
 
   viewer.innerHTML = '';
 
-  const mediaWrapper = document.createElement('div');
-  mediaWrapper.className = 'burst-spotlight-media';
-  const mainImg = document.createElement('img');
-  mainImg.src = images[0];
-  mainImg.alt = 'Burst spotlight';
-  mainImg.loading = 'lazy';
-  mediaWrapper.appendChild(mainImg);
-  burstSpotlightCurrentImage = images[0];
-
+  // Details panel (meta + grid of images)
   const details = document.createElement('div');
   details.className = 'burst-spotlight-details';
 
@@ -386,27 +432,20 @@ function showBurstSpotlight(burst, card) {
     <span><strong>Frames:</strong> ${burst.burstCount}</span>
     <span><strong>Timestamp:</strong> ${formatBurstTimestamp(burst.timestamp)}</span>
   `;
-
   details.appendChild(meta);
 
-  if (images.length > 1) {
-    const thumbs = document.createElement('div');
-    thumbs.className = 'burst-spotlight-thumbs';
-
-    images.forEach((src, index) => {
-      const thumb = document.createElement('img');
-      thumb.src = src;
-      thumb.alt = `frame-${index}`;
-      thumb.loading = 'lazy';
-      thumb.addEventListener('click', () => {
-        mainImg.src = src;
-        burstSpotlightCurrentImage = src;
-      });
-      thumbs.appendChild(thumb);
-    });
-
-    details.appendChild(thumbs);
-  }
+  // Grid of spotlight images
+  const grid = document.createElement('div');
+  grid.className = 'burst-spotlight-grid';
+  images.forEach((src, index) => {
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = `burst-frame-${index}`;
+    img.loading = 'lazy';
+    img.addEventListener('click', () => openBurstImageModal(src, burst));
+    grid.appendChild(img);
+  });
+  details.appendChild(grid);
 
   const actions = document.createElement('div');
   actions.className = 'burst-spotlight-actions';
@@ -414,14 +453,9 @@ function showBurstSpotlight(burst, card) {
   openAlertBtn.textContent = 'Open Alert';
   openAlertBtn.addEventListener('click', () => openBurstAlert(burst));
   actions.appendChild(openAlertBtn);
-  const viewImageBtn = document.createElement('button');
-  viewImageBtn.textContent = 'View Image';
-  viewImageBtn.classList.add('secondary');
-  viewImageBtn.addEventListener('click', () => openBurstImageModal(burstSpotlightCurrentImage || images[0], burst));
-  actions.appendChild(viewImageBtn);
+  // Remove single-image viewer button; each grid image opens modal
   details.appendChild(actions);
 
-  viewer.appendChild(mediaWrapper);
   viewer.appendChild(details);
 }
 
