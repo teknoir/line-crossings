@@ -60,7 +60,6 @@ baseRouter.get('/bursts', (req, res) => {
 
     <div class="burst-preview-section" id="burstPreviewSection">
       <div class="burst-preview-header">
-        <h2 class="h-section">Burst Preview</h2>
         <div class="burst-preview-controls">
           <div class="bp-pagination" id="burstPagination"></div>
           <form class="burst-preview-form" autocomplete="off" onsubmit="return false;">

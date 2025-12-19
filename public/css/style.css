@@ -901,6 +901,154 @@ header { margin-bottom: var(--space-section); }
 .inline-gap-sm { display:flex; gap: var(--space-sm); }
 .inline-gap-md { display:flex; gap: var(--space-md); }
 
+/* Burst Preview: horizontal control bar */
+.burst-preview-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap; /* allow wrap on narrow screens */
+}
+
+/* Pagination compact block */
+.bp-pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+.bp-pagination .pagination-info {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.bp-pagination .pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.bp-pagination .pagination-controls button,
+.bp-pagination .pagination-controls .pagination-jump,
+.bp-pagination .pagination-controls .pagination-size {
+  height: 32px;
+}
+.bp-pagination .pagination-controls .pagination-jump {
+  width: 64px;
+  padding: 4px 8px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-alt);
+  color: var(--color-text);
+}
+.bp-pagination .pagination-controls .pagination-size {
+  padding: 4px 8px;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border-alt);
+  color: var(--color-text);
+}
+.bp-pagination .pagination-page {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* Filters form aligned inline */
+.burst-preview-form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex: 1; /* take remaining space */
+  flex-wrap: wrap;
+}
+.burst-preview-form .bp-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.burst-preview-form .bp-control span {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+.burst-preview-form input[type="date"],
+.burst-preview-form input[type="text"] {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-alt);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  height: 32px;
+}
+
+/* Direction radio group compact */
+.bp-radio-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bp-radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* Load button consistent sizing */
+#burstLoadBtn {
+  height: 32px;
+  padding: 6px 14px;
+}
+
+/* Layout around preview */
+.burst-preview-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--space-md);
+}
+.burst-left, .burst-right {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: var(--space-md);
+}
+
+/* Cards grid */
+.burst-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-md);
+}
+.burst-card {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+}
+.burst-card.selected {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(237,109,54,0.25);
+}
+.burst-card-header, .burst-card-footer {
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.burst-thumb-strip {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  overflow-x: auto;
+}
+.burst-thumb-strip img { height: 64px; border-radius: 0; }
+
+/* Spotlight */
+.burst-spotlight-details { display: grid; gap: var(--space-md); }
+.burst-spotlight-meta { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 6px; font-size: 13px; }
+.burst-spotlight-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap: 8px; }
+.burst-spotlight-grid img { width: 100%; height: auto; }
+.burst-spotlight-actions { display: flex; justify-content: flex-end; }
+
 /* Responsive tweaks */
 @media (max-width: 900px) {
   header { padding: var(--space-md); }
@@ -908,6 +1056,7 @@ header { margin-bottom: var(--space-section); }
   .alert-item { padding: 10px 12px; }
   .info-card { padding: 10px; }
   .alert-modal-media { min-height: 300px; }
+  .burst-preview-layout { grid-template-columns: 1fr; }
 }
 
 /* Full-width Alert Details modal adjustments */
@@ -1120,3 +1269,76 @@ header { margin-bottom: var(--space-section); }
   background: #0f0f10;
   box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 }
+
+/* === Global Button System === */
+button,
+.filters button,
+.annotations-filter button,
+.pagination button,
+.burst-spotlight-actions button,
+.header-controls a.button {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--color-border-alt);
+  background: var(--color-accent); /* primary orange */
+  color: #fff;
+  padding: 8px 14px;
+  height: 34px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.05s ease;
+  white-space: nowrap;
+}
+button:hover,
+.filters button:hover,
+.annotations-filter button:hover,
+.pagination button:hover:not(:disabled),
+.burst-spotlight-actions button:hover,
+.header-controls a.button:hover {
+  background: var(--color-accent-hover);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.45);
+}
+button:active { transform: translateY(1px); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Variants */
+.btn-secondary { background: var(--color-border-alt); color: #fff; }
+.btn-secondary:hover { background: #4a525b; }
+.btn-muted { background: #3a3d42; color: #eaeaea; border-color: #4a4d52; }
+.btn-danger { background: var(--color-danger); border-color: #cc4c43; }
+.btn-success { background: var(--color-success); border-color: #2c4e9b; }
+
+/* Ensure existing specific buttons adopt variant where intended */
+.filters button#clearBtn,
+.annotations-filter button#resetAnnotationFilters { background: var(--color-border-alt); }
+.filters button#clearBtn:hover,
+.annotations-filter button#resetAnnotationFilters:hover { background: #45454a; }
+
+/* === Alerts page date pickers: match bursts page dark styling === */
+.date-filters input[type="datetime-local"],
+.filters input[type="date"],
+.filters input[type="time"] {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-alt);
+  border-radius: 4px;
+  font-size: 14px;
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  cursor: pointer;
+  height: 34px;
+}
+.date-filters input[type="datetime-local"]:focus,
+.filters input[type="date"]:focus,
+.filters input[type="time"]:focus {
+  outline: none;
+  border-color: var(--tek-brand-blue);
+  box-shadow: 0 0 0 2px rgba(33,150,243,0.25);
+}
+
+/* Remove legacy white style to avoid conflict */
+/* (kept for reference, overridden by the above dark theme) */
+/* .date-filters input[type="datetime-local"] { background: white; border: 1px solid #ddd; } */
+
