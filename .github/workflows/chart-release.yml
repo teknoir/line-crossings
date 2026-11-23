@@ -1,0 +1,23 @@
+# Generated from charts/ci/files/repos/line-crossings.yaml on 2026-11-23 by plans/cicd/migrate/gen_callers.py
+# Edit freely afterwards; re-running the generator overwrites this file.
+name: chart-release
+
+on:
+  push:
+    branches: [release, beta]
+  workflow_dispatch:
+
+concurrency:
+  group: chart-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  chart-release:
+    uses: teknoir/ci-workflows/.github/workflows/chart-release.yml@main
+    with:
+      release-branch: release
+      prerelease-branch: beta
+    permissions:
+      contents: write
